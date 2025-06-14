@@ -1,0 +1,46 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "my-pos-desktop",
+  "version": "0.1.0",
+  "identifier": "com.my-pos-desktop.app",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "my-pos-desktop",
+        "width": 800,
+        "height": 600
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  },
+  "plugins": {
+    "updater": {
+      "active": true,
+      "endpoints": [
+        "https://tu-dominio.com/updates/{{target}}/{{arch}}/{{current_version}}/latest.json"
+      ],
+      "dialog": true,
+      "pubkey": "-----BEGIN PUBLIC KEY-----\ndW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDg1NEU0RTEwNTVFMjQyM0YKUldRL1F1SlZFRTVPaGJxQXVsT2djZW1KLzdDNGNWNmpEUzBPcWZJMjBJR2I0akJibkZCajJZK0MK\n-----END PUBLIC KEY-----"
+    },
+    "dialog": null
+  }
+}
