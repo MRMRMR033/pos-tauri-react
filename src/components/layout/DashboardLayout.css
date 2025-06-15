@@ -1,0 +1,78 @@
+/* src/components/layout/DashboardLayout.css */
+
+/* Layout raíz */
+.dl-root {
+    display: grid;
+    grid-template-areas:
+      "header header"
+      "sidebar content";
+    grid-template-rows: 60px 1fr;
+    grid-template-columns: 200px 1fr;
+    height: 100vh;
+    overflow: hidden;
+    font-family: sans-serif;
+  }
+  
+  /* Header fijo arriba */
+  .dl-header {
+    grid-area: header;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1rem;
+    background-color: #1f2937;
+    color: #ffffff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  .dl-header__brand {
+    font-size: 1.25rem;
+    font-weight: bold;
+  }
+  
+  .dl-header__logout {
+    background: none;
+    border: 1px solid #ffffff;
+    color: #ffffff;
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .dl-header__logout:hover {
+    background-color: rgba(255,255,255,0.1);
+  }
+  
+  /* Sidebar a la izquierda */
+  .dl-sidebar {
+    grid-area: sidebar;
+    background-color: #111827;
+    padding: 1rem;
+    box-shadow: 2px 0 4px rgba(0,0,0,0.1);
+  }
+  
+  .dl-nav__link {
+    display: block;
+    color: #d1d5db;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+    border-radius: 4px;
+    text-decoration: none;
+    transition: background-color 0.2s, color 0.2s;
+  }
+  
+  .dl-nav__link:hover,
+  .dl-nav__link.active {
+    background-color: #374151;
+    color: #ffffff;
+  }
+  
+  /* Área principal de contenido */
+  .dl-content {
+    grid-area: content;
+    padding: 1.5rem;
+    overflow-y: auto;
+    background-color: #f9fafb;
+  }
+  

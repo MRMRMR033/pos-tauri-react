@@ -6,12 +6,9 @@ export interface User {
   
   export interface AuthData {
     accessToken: string;
-    refreshToken: string;
-    user: User;
   }
   
   export interface Credentials {
     email: string;
     password: string;
   }
-  
