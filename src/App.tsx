@@ -63,7 +63,8 @@ const App: React.FC = () => {
   }, [navigate, location.pathname]);
 
   return (
-    <Routes>
+    <>
+      <Routes>
       {/* Ruta pública */}
       <Route path="/login" element={<Login />} />
 
@@ -146,6 +147,7 @@ const App: React.FC = () => {
         <Route index element={<Navigate to="ventas" replace />} />
       </Route>
     </Routes>
+    </>
   );
 };
 

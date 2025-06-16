@@ -1,6 +1,7 @@
-// src/contexts/AuthContext.tsx - VERSIÓN CON PERMISOS
+// src/contexts/AuthContext.tsx - VERSIÓN FINAL CON ENDPOINTS REALES
+// 🚀 Sistema de permisos completamente integrado con backend
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
-import { login, getProfile, getUserPermissions } from '../api/auth';
+import { login, getProfile, getUserPermissions, getAllPermissions } from '../api/auth';
 import { Store } from '@tauri-apps/plugin-store';
 import { ALL_PERMISSIONS } from '../types/permissions';
 
@@ -65,9 +66,48 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           setAccessToken(saved.accessToken);
           if (saved.user) {
             setUser(saved.user);
-          }
-          if (saved.permissions) {
-            setPermissions(saved.permissions);
+            
+            // Verificar permisos guardados
+            if (saved.permissions && saved.permissions.length > 0) {
+              setPermissions(saved.permissions);
+            } else {
+              
+              // Si no hay permisos guardados, intentar recargarlos del backend
+              try {
+                if (saved.user.rol === 'ADMIN' || saved.user.rol === 'admin') {
+                  // Para admins, obtener todos los permisos
+                  const allPermissions = await getAllPermissions(saved.accessToken);
+                  const adminPermissions = allPermissions.map(p => p.key);
+                  setPermissions(adminPermissions);
+                  
+                  // Actualizar store
+                  await storeInstance.set('auth', {
+                    ...saved,
+                    permissions: adminPermissions
+                  });
+                  await storeInstance.save();
+                } else {
+                  // Para empleados, obtener permisos específicos
+                  const userPerms = await getUserPermissions(saved.user.id, saved.accessToken);
+                  setPermissions(userPerms);
+                  
+                  // Actualizar store
+                  await storeInstance.set('auth', {
+                    ...saved,
+                    permissions: userPerms
+                  });
+                  await storeInstance.save();
+                }
+              } catch (reloadError) {
+                console.error('❌ Error recargando permisos - sesión puede estar expirada:', reloadError);
+                // Limpiar sesión inválida
+                await storeInstance.delete('auth');
+                await storeInstance.save();
+                setUser(null);
+                setAccessToken(null);
+                setPermissions([]);
+              }
+            }
           }
         }
       } catch (err) {
@@ -80,11 +120,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const signIn = async ({ email, password }: { email: string; password: string }) => {
     try {
-      console.log('Intentando login con:', { email, password: '***' });
       
       // 1. Llamar login para obtener token
       const { access_token } = await login({ email, password });
-      console.log('Token obtenido:', access_token ? 'Sí' : 'No');
       
       if (!access_token) {
         throw new Error('No se recibió token de acceso');
@@ -93,27 +131,48 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setAccessToken(access_token);
 
       // 2. Llamar perfil para obtener datos de usuario
-      console.log('Obteniendo perfil...');
       const perfil = await getProfile(access_token);
-      console.log('Perfil obtenido:', perfil);
       
       setUser(perfil);
 
-      // 3. Obtener permisos del usuario
-      console.log('Obteniendo permisos...');
+      // 3. Obtener permisos del usuario desde backend real
       let userPermissions: string[] = [];
+      
       try {
-        // Si es admin, tiene todos los permisos
-        if (perfil.rol === 'ADMIN') {
-          userPermissions = Object.values(ALL_PERMISSIONS);
-          console.log('Usuario admin - todos los permisos asignados');
+        if (perfil.rol === 'ADMIN' || perfil.rol === 'admin') {
+          // Los admins tienen todos los permisos automáticamente
+          
+          try {
+            // Intentar obtener todos los permisos del backend para estar al día
+            const allPermissionsFromBackend = await getAllPermissions(access_token);
+            userPermissions = allPermissionsFromBackend.map(p => p.key);
+          } catch (adminPermError) {
+            // Fallback: usar permisos definidos en frontend
+            console.warn('⚠️ No se pudieron obtener permisos del backend, usando fallback de admin');
+            userPermissions = Object.values(ALL_PERMISSIONS);
+          }
         } else {
+          // Empleados: obtener permisos específicos desde backend
           userPermissions = await getUserPermissions(perfil.id, access_token);
-          console.log('Permisos obtenidos:', userPermissions);
+          
+          if (userPermissions.length === 0) {
+            console.warn('⚠️ Usuario sin permisos asignados en backend');
+            throw new Error('Usuario sin permisos asignados');
+          }
+          
         }
       } catch (permError) {
-        console.warn('Error obteniendo permisos, usando permisos vacíos:', permError);
-        userPermissions = [];
+        console.error('❌ Error obteniendo permisos desde backend:', permError);
+        
+        // En caso de error crítico, no permitir acceso
+        if (perfil.rol === 'ADMIN' || perfil.rol === 'admin') {
+          // Para admins, usar permisos de fallback
+            userPermissions = Object.values(ALL_PERMISSIONS);
+        } else {
+          // Para empleados, mostrar error - no dar acceso sin permisos del backend
+          console.error('❌ No se pueden cargar permisos para empleado desde backend');
+          throw new Error('No se pudieron cargar los permisos. Contacte al administrador.');
+        }
       }
       
       setPermissions(userPermissions);
@@ -126,7 +185,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           permissions: userPermissions 
         });
         await authStore.save();
-        console.log('Sesión guardada en store');
       }
     } catch (error) {
       console.error('Error en signIn:', error);
@@ -155,34 +213,41 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Funciones para manejo de permisos
   const hasPermission = (permission: string): boolean => {
     if (!user || !accessToken) return false;
-    if (user.rol === 'ADMIN') return true; // Admin tiene todos los permisos
+    if (user.rol === 'ADMIN' || user.rol === 'admin') return true; // Admin tiene todos los permisos
     return permissions.includes(permission);
   };
 
   const hasAnyPermission = (permissionList: string[]): boolean => {
     if (!user || !accessToken) return false;
-    if (user.rol === 'ADMIN') return true; // Admin tiene todos los permisos
+    if (user.rol === 'ADMIN' || user.rol === 'admin') return true; // Admin tiene todos los permisos
     return permissionList.some(permission => permissions.includes(permission));
   };
 
   const hasAllPermissions = (permissionList: string[]): boolean => {
     if (!user || !accessToken) return false;
-    if (user.rol === 'ADMIN') return true; // Admin tiene todos los permisos
+    if (user.rol === 'ADMIN' || user.rol === 'admin') return true; // Admin tiene todos los permisos
     return permissionList.every(permission => permissions.includes(permission));
   };
 
   const isAdmin = (): boolean => {
-    return user?.rol === 'ADMIN';
+    return user?.rol === 'ADMIN' || user?.rol === 'admin';
   };
 
   const refreshPermissions = async (): Promise<void> => {
-    if (!user || !accessToken) return;
+    if (!user || !accessToken) {
+      console.warn('⚠️ No se pueden refrescar permisos: usuario o token ausente');
+      return;
+    }
     
     try {
       let userPermissions: string[] = [];
-      if (user.rol === 'ADMIN') {
-        userPermissions = Object.values(ALL_PERMISSIONS);
+      
+      if (user.rol === 'ADMIN' || user.rol === 'admin') {
+        // Admins: obtener todos los permisos actualizados
+        const allPermissions = await getAllPermissions(accessToken);
+        userPermissions = allPermissions.map(p => p.key);
       } else {
+        // Empleados: obtener permisos específicos actualizados
         userPermissions = await getUserPermissions(user.id, accessToken);
       }
       
@@ -198,7 +263,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         await authStore.save();
       }
     } catch (error) {
-      console.error('Error refrescando permisos:', error);
+      console.error('❌ Error refrescando permisos desde backend:', error);
+      throw error;
     }
   };
 

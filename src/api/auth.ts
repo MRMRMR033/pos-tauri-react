@@ -1,4 +1,5 @@
-// src/api/auth.ts - VERSIÓN CORREGIDA
+// src/api/auth.ts - VERSIÓN FINAL CON ENDPOINTS REALES
+// 🚀 Integración completa con backend de permisos
 import { fetch } from '@tauri-apps/plugin-http';
 import type { Credentials } from '../types/auth';
 
@@ -49,94 +50,112 @@ export async function getProfile(token: string): Promise<any> {
   }
 }
 
-// Nuevas funciones para manejo de permisos
+// Interfaces para los endpoints reales del backend
+interface PermissionResponse {
+  id: number;
+  key: string;
+  name: string;
+  description: string;
+  module: string;
+}
+
+interface SafeApiCallOptions extends RequestInit {
+  headers?: Record<string, string>;
+}
+
+// Función utilitaria para llamadas seguras a la API
+const safeApiCall = async (url: string, token: string, options: SafeApiCallOptions = {}): Promise<any> => {
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        ...options.headers
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`API Error ${response.status}: ${response.statusText} - ${errorText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error(`❌ Error calling ${url}:`, error);
+    throw error;
+  }
+};
+
+// Obtener permisos específicos de un usuario (usa estructura real del backend)
 export async function getUserPermissions(userId: number, token: string): Promise<string[]> {
   try {
-    const res = await fetch(`${API_URL}/auth/permissions/user/${userId}`, {
-      method: 'GET',
-      headers: { 
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-    });
     
-    if (!res.ok) {
-      const errorData = await res.text();
-      console.error('Error obteniendo permisos:', errorData);
-      throw new Error(`Error ${res.status}: No se pudieron obtener los permisos`);
-    }
+    const permissions: PermissionResponse[] = await safeApiCall(
+      `${API_URL}/auth/permissions/user/${userId}`,
+      token
+    );
     
-    const data = await res.json();
-    return data.permissions || [];
+    // Extraer solo las keys de los permisos (productos:ver, ventas:crear, etc.)
+    const permissionKeys = permissions.map(p => p.key);
+    
+    return permissionKeys;
   } catch (error) {
-    console.error('Error en getUserPermissions:', error);
+    console.error('❌ Error en getUserPermissions:', error);
     throw error;
   }
 }
 
-export async function getAllPermissions(token: string): Promise<{ name: string; description: string; module: string }[]> {
+// Obtener todos los permisos del sistema (usa estructura real del backend)
+export async function getAllPermissions(token: string): Promise<PermissionResponse[]> {
   try {
-    const res = await fetch(`${API_URL}/auth/permissions/all`, {
-      method: 'GET',
-      headers: { 
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-    });
     
-    if (!res.ok) {
-      const errorData = await res.text();
-      console.error('Error obteniendo todos los permisos:', errorData);
-      throw new Error(`Error ${res.status}: No se pudieron obtener los permisos`);
-    }
+    const permissions: PermissionResponse[] = await safeApiCall(
+      `${API_URL}/auth/permissions/all`,
+      token
+    );
     
-    return await res.json();
+    return permissions;
   } catch (error) {
-    console.error('Error en getAllPermissions:', error);
+    console.error('❌ Error en getAllPermissions:', error);
     throw error;
   }
 }
 
-export async function grantPermission(userId: number, permission: string, token: string): Promise<void> {
+// Otorgar permiso a usuario (usa estructura real del backend)
+export async function grantPermission(userId: number, permissionKey: string, token: string): Promise<void> {
   try {
-    const res = await fetch(`${API_URL}/auth/permissions/grant`, {
-      method: 'POST',
-      headers: { 
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ userId, permission })
-    });
     
-    if (!res.ok) {
-      const errorData = await res.text();
-      console.error('Error asignando permiso:', errorData);
-      throw new Error(`Error ${res.status}: No se pudo asignar el permiso`);
-    }
+    await safeApiCall(
+      `${API_URL}/auth/permissions/grant`,
+      token,
+      {
+        method: 'POST',
+        body: JSON.stringify({ userId, permissionKey })
+      }
+    );
+    
   } catch (error) {
-    console.error('Error en grantPermission:', error);
+    console.error('❌ Error en grantPermission:', error);
     throw error;
   }
 }
 
-export async function revokePermission(userId: number, permission: string, token: string): Promise<void> {
+// Revocar permiso de usuario (usa estructura real del backend)
+export async function revokePermission(userId: number, permissionKey: string, token: string): Promise<void> {
   try {
-    const res = await fetch(`${API_URL}/auth/permissions/revoke`, {
-      method: 'POST',
-      headers: { 
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ userId, permission })
-    });
     
-    if (!res.ok) {
-      const errorData = await res.text();
-      console.error('Error revocando permiso:', errorData);
-      throw new Error(`Error ${res.status}: No se pudo revocar el permiso`);
-    }
+    await safeApiCall(
+      `${API_URL}/auth/permissions/revoke`,
+      token,
+      {
+        method: 'POST',
+        body: JSON.stringify({ userId, permissionKey })
+      }
+    );
+    
   } catch (error) {
-    console.error('Error en revokePermission:', error);
+    console.error('❌ Error en revokePermission:', error);
     throw error;
   }
 }
