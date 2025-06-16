@@ -4,6 +4,7 @@ import './Venta.css';
 
 const Venta: React.FC = () => {
   return (
+
     <div className="venta-page">
       <h1>Ventas</h1>
       <div className="venta-search">

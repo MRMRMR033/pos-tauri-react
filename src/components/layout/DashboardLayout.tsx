@@ -16,9 +16,9 @@ const DashboardLayout: React.FC<Props> = ({ children }) => {
       </header>
       <aside className="dl-sidebar">
         <nav>
-          <NavLink to="ventas" className="dl-nav__link">Ventas</NavLink>
-          <NavLink to="productos" className="dl-nav__link">Productos</NavLink>
-          <NavLink to="inventario" className="dl-nav__link">Inventario</NavLink>
+          <NavLink to="ventas" className="dl-nav__link">Ventas [F1]</NavLink>
+          <NavLink to="productos" className="dl-nav__link">Productos [F2]</NavLink>
+          <NavLink to="inventario" className="dl-nav__link">Inventario [F4]</NavLink>
         </nav>
       </aside>
       <main className="dl-content">
