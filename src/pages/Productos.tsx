@@ -50,12 +50,12 @@ const Productos: React.FC = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [productosData, categoriasData, proveedoresData] = await Promise.all([
-        getProductos(accessToken || undefined),
+      const [productosResponse, categoriasData, proveedoresData] = await Promise.all([
+        getProductos(undefined, accessToken || undefined),
         getCategorias(accessToken || undefined),
         getProveedores(accessToken || undefined)
       ]);
-      setProductos(productosData);
+      setProductos(productosResponse.productos);
       setCategorias(categoriasData);
       setProveedores(proveedoresData);
     } catch (err) {

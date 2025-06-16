@@ -64,9 +64,35 @@ function getAuthHeaders(token?: string): HeadersInit {
 }
 
 // ========== PRODUCTOS ==========
-export async function getProductos(token?: string): Promise<Producto[]> {
+export interface ProductSearchParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface ProductListResponse {
+  productos: Producto[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export async function getProductos(params?: ProductSearchParams, token?: string): Promise<ProductListResponse> {
   try {
-    const res = await fetch(`${API_URL}/producto`, {
+    const queryParams = new URLSearchParams();
+    
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.search) queryParams.append('search', params.search);
+    if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
+    if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+    
+    const url = `${API_URL}/producto${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+    
+    const res = await fetch(url, {
       method: 'GET',
       headers: getAuthHeaders(token),
     });
@@ -75,7 +101,20 @@ export async function getProductos(token?: string): Promise<Producto[]> {
       throw new Error(`Error ${res.status}: No se pudieron obtener los productos`);
     }
     
-    return await res.json();
+    const data = await res.json();
+    
+    // Si el backend no devuelve la estructura de paginación, adaptamos
+    if (Array.isArray(data)) {
+      return {
+        productos: data,
+        total: data.length,
+        page: params?.page || 1,
+        limit: params?.limit || data.length,
+        totalPages: 1
+      };
+    }
+    
+    return data;
   } catch (error) {
     console.error('Error en getProductos:', error);
     throw error;
@@ -235,8 +274,8 @@ export async function getProveedorById(id: number, token?: string): Promise<Prov
 // Función auxiliar para buscar producto por código de barras
 export async function getProductoByBarcode(codigo: string, token?: string): Promise<Producto | null> {
   try {
-    const productos = await getProductos(token);
-    return productos.find(p => p.codigoBarras === codigo) || null;
+    const response = await getProductos(undefined, token);
+    return response.productos.find(p => p.codigoBarras === codigo) || null;
   } catch (error) {
     console.error('Error en getProductoByBarcode:', error);
     throw error;

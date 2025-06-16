@@ -3,7 +3,7 @@ import React, { useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import Login from './pages/Login';
 import Venta from './pages/Venta';
-import Productos from './pages/Productos';
+import ProductosModerno from './pages/ProductosModerno';
 import Inventario from './pages/Inventario';
 import Categorias from './pages/Categorias';
 import Proveedores from './pages/Proveedores';
@@ -99,7 +99,7 @@ const App: React.FC = () => {
             permission={ALL_PERMISSIONS.PRODUCTOS_VER}
             redirectTo="/no-permisos"
           >
-            <Productos />
+            <ProductosModerno />
           </PermissionProtectedRoute>
         } />
         
