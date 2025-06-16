@@ -1,10 +1,16 @@
-// src/pages/Categorias.tsx
+// src/pages/Categorias.tsx - Con sistema de permisos
 import React, { useState, useEffect, FormEvent, ChangeEvent } from 'react';
 import './Categorias.css';
 import { getCategorias, createCategoria, updateCategoria, deleteCategoria, type Categoria } from '../api/products';
 import { createCategoria as createCategoriaApi, updateCategoria as updateCategoriaApi, deleteCategoria as deleteCategoriaApi } from '../api/categories';
+import { ProtectedComponent, ProtectedButton } from '../components/auth/ProtectedComponent';
+import { usePermissions } from '../hooks/usePermissions';
+import { ALL_PERMISSIONS } from '../types/permissions';
+import '../components/auth/ProtectedComponent.css';
 
 const Categorias: React.FC = () => {
+  const { hasPermission } = usePermissions();
+  
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [form, setForm] = useState({ nombre: '' });
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -33,6 +39,14 @@ const Categorias: React.FC = () => {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    
+    // Verificar permisos
+    const requiredPermission = editingId ? ALL_PERMISSIONS.CATEGORIAS_EDITAR : ALL_PERMISSIONS.CATEGORIAS_CREAR;
+    if (!hasPermission(requiredPermission)) {
+      setError(`No tienes permisos para ${editingId ? 'editar' : 'crear'} categorías`);
+      return;
+    }
+    
     setLoading(true);
     setError(null);
     setSuccess(null);
@@ -50,7 +64,11 @@ const Categorias: React.FC = () => {
       setForm({ nombre: '' });
       await loadCategorias();
     } catch (err: any) {
-      setError(err.message || 'Error al procesar la categoría');
+      if (err.message?.includes('permiso') || err.message?.includes('autorizado')) {
+        setError('No tienes permisos suficientes para realizar esta acción');
+      } else {
+        setError(err.message || 'Error al procesar la categoría');
+      }
     } finally {
       setLoading(false);
     }
@@ -105,9 +123,23 @@ const Categorias: React.FC = () => {
         </div>
         
         <div className="form-actions">
-          <button type="submit" className="submit-btn" disabled={loading}>
+          {/* Botón de crear/editar - Con protección de permisos */}
+          <ProtectedButton
+            permission={editingId ? ALL_PERMISSIONS.CATEGORIAS_EDITAR : ALL_PERMISSIONS.CATEGORIAS_CREAR}
+            type="submit"
+            className="submit-btn"
+            disabled={loading}
+            fallback={
+              <div className="permission-error">
+                <span className="error-text">
+                  No tienes permisos para {editingId ? 'editar' : 'crear'} categorías
+                </span>
+              </div>
+            }
+          >
             {loading ? 'Procesando...' : editingId ? 'Actualizar' : 'Crear'}
-          </button>
+          </ProtectedButton>
+          
           {editingId && (
             <button type="button" className="cancel-btn" onClick={handleCancelEdit}>
               Cancelar
@@ -123,18 +155,23 @@ const Categorias: React.FC = () => {
             <div key={categoria.id} className="categoria-card">
               <h3>{categoria.nombre}</h3>
               <div className="categoria-actions">
-                <button 
-                  className="edit-btn" 
+                {/* Botón de editar - Solo con permisos */}
+                <ProtectedButton
+                  permission={ALL_PERMISSIONS.CATEGORIAS_EDITAR}
+                  className="edit-btn"
                   onClick={() => handleEdit(categoria)}
                 >
                   Editar
-                </button>
-                <button 
-                  className="delete-btn" 
+                </ProtectedButton>
+                
+                {/* Botón de eliminar - Solo con permisos */}
+                <ProtectedButton
+                  permission={ALL_PERMISSIONS.CATEGORIAS_ELIMINAR}
+                  className="delete-btn"
                   onClick={() => handleDelete(categoria.id)}
                 >
                   Eliminar
-                </button>
+                </ProtectedButton>
               </div>
             </div>
           ))}

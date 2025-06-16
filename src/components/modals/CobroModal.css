@@ -6,163 +6,282 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(10px);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  animation: overlayFadeIn 0.3s ease-out;
+}
+
+@keyframes overlayFadeIn {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(10px);
+  }
 }
 
 .cobro-modal {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-  width: 400px;
-  max-width: 90vw;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 20px;
+  box-shadow: 
+    0 25px 50px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.3);
+  width: 450px;
+  max-width: 95vw;
   max-height: 90vh;
   overflow: hidden;
-  animation: modalSlideIn 0.2s ease-out;
+  animation: modalSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
 }
 
 @keyframes modalSlideIn {
   from {
-    transform: translateY(-50px);
+    transform: translateY(-50px) scale(0.9);
     opacity: 0;
   }
   to {
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
     opacity: 1;
   }
+}
+
+.cobro-modal::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #059669, #047857, #059669);
+  background-size: 200% 100%;
+  animation: gradientShift 3s ease-in-out infinite;
+}
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
 }
 
 .cobro-modal__header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.5rem;
-  background: #3b82f6;
-  color: white;
+  padding: 2rem 2rem 1rem 2rem;
+  position: relative;
 }
 
 .cobro-modal__header h2 {
   margin: 0;
-  font-size: 1.25rem;
-  font-weight: 600;
+  font-size: 1.5rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #059669, #047857);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: #059669;
 }
 
 .cobro-modal__close {
   background: none;
   border: none;
-  color: white;
-  font-size: 1.5rem;
+  color: #6b7280;
+  font-size: 1.75rem;
   cursor: pointer;
-  padding: 0;
-  width: 30px;
-  height: 30px;
+  padding: 0.5rem;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  transition: background-color 0.2s;
+  transition: all 0.2s ease;
 }
 
 .cobro-modal__close:hover {
-  background-color: rgba(255, 255, 255, 0.2);
+  background: rgba(107, 114, 128, 0.1);
+  color: #374151;
+  transform: rotate(90deg);
 }
 
 .cobro-modal__content {
-  padding: 1.5rem;
+  padding: 0 2rem 1rem 2rem;
 }
 
 .cobro-total {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem;
-  background: #f3f4f6;
-  border-radius: 6px;
-  margin-bottom: 1.5rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+  border-radius: 16px;
+  margin-bottom: 2rem;
+  border: 1px solid #bbf7d0;
+  animation: slideInScale 0.5s ease-out 0.1s both;
+}
+
+@keyframes slideInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .cobro-label {
-  font-weight: 500;
+  font-weight: 600;
   color: #374151;
+  font-size: 1.1rem;
 }
 
 .cobro-amount {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #1f2937;
+  font-size: 2rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #059669, #047857);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: #059669;
+  animation: pulseScale 2s ease-in-out infinite;
+}
+
+@keyframes pulseScale {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
 }
 
 .cobro-amount.negative {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
   color: #dc2626;
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
 }
 
 .cobro-amount.positive {
+  background: linear-gradient(135deg, #059669, #047857);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
   color: #059669;
 }
 
 .cobro-input-group {
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
+  animation: slideInUp 0.5s ease-out 0.2s both;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .cobro-input-group label {
   display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
+  margin-bottom: 0.75rem;
+  font-weight: 600;
   color: #374151;
+  font-size: 1rem;
 }
 
 .cobro-input-group input {
   width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  font-size: 1.125rem;
+  padding: 1.25rem 1.5rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 1.25rem;
   text-align: right;
+  font-weight: 600;
+  background: #fafafa;
+  transition: all 0.2s ease;
   box-sizing: border-box;
+  font-family: inherit;
 }
 
 .cobro-input-group input:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+  border-color: #059669;
+  background: white;
+  box-shadow: 
+    0 0 0 3px rgba(5, 150, 105, 0.1),
+    0 4px 15px rgba(5, 150, 105, 0.1);
+  transform: translateY(-1px);
+}
+
+.cobro-input-group input::placeholder {
+  color: #9ca3af;
+  font-weight: 400;
 }
 
 .cobro-cambio {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem;
-  background: #f9fafb;
-  border-radius: 4px;
+  padding: 1rem 1.25rem;
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+  border-radius: 12px;
   margin-bottom: 1rem;
+  border: 1px solid #e2e8f0;
+  animation: slideInUp 0.5s ease-out 0.3s both;
 }
 
 .cobro-error {
+  background: linear-gradient(135deg, #fef2f2, #fee2e2);
   color: #dc2626;
-  background: #fee;
-  padding: 0.75rem;
-  border-radius: 4px;
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
   margin-bottom: 1rem;
   text-align: center;
-  font-weight: 500;
+  font-weight: 600;
+  border: 1px solid #fca5a5;
+  animation: slideInUp 0.4s ease-out, shake 0.5s ease-in-out;
+  box-shadow: 0 4px 15px rgba(220, 38, 38, 0.1);
 }
 
 .cobro-modal__footer {
-  padding: 1.5rem;
-  background: #f9fafb;
+  padding: 1.5rem 2rem 2rem 2rem;
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
   border-top: 1px solid #e5e7eb;
+  animation: slideInUp 0.5s ease-out 0.4s both;
 }
 
 .cobro-instructions {
   display: flex;
   justify-content: center;
   gap: 2rem;
-  margin-bottom: 1rem;
-  font-size: 0.875rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
   color: #6b7280;
+  font-weight: 500;
+}
+
+.cobro-instructions span {
+  background: rgba(102, 126, 234, 0.1);
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  border: 1px solid rgba(102, 126, 234, 0.2);
 }
 
 .cobro-actions {
@@ -172,35 +291,65 @@
 }
 
 .cobro-btn {
-  padding: 0.75rem 1.5rem;
+  padding: 1rem 2rem;
   border: none;
-  border-radius: 4px;
+  border-radius: 12px;
   font-weight: 600;
+  font-size: 1rem;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cobro-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.cobro-btn:hover:not(.disabled)::before {
+  left: 100%;
 }
 
 .cobro-btn--cancel {
-  background: #6b7280;
+  background: linear-gradient(135deg, #6b7280, #4b5563);
   color: white;
 }
 
 .cobro-btn--cancel:hover {
-  background: #4b5563;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(107, 114, 128, 0.4);
 }
 
 .cobro-btn--confirm {
-  background: #059669;
+  background: linear-gradient(135deg, #059669, #047857);
   color: white;
 }
 
 .cobro-btn--confirm:hover:not(.disabled) {
-  background: #047857;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(5, 150, 105, 0.4);
 }
 
 .cobro-btn--confirm.disabled {
-  background: #9ca3af;
+  background: linear-gradient(135deg, #9ca3af, #6b7280);
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  opacity: 0.7;
+}
+
+.cobro-btn:active:not(.disabled) {
+  transform: translateY(0);
 }
 
 /* Responsive */
@@ -208,15 +357,62 @@
   .cobro-modal {
     width: 95vw;
     margin: 0 auto;
+    border-radius: 16px;
+  }
+  
+  .cobro-modal__header,
+  .cobro-modal__content,
+  .cobro-modal__footer {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+  
+  .cobro-total {
+    padding: 1.25rem;
+    flex-direction: column;
+    gap: 0.5rem;
+    text-align: center;
+  }
+  
+  .cobro-amount {
+    font-size: 1.75rem;
+  }
+  
+  .cobro-input-group input {
+    padding: 1rem 1.25rem;
+    font-size: 1.125rem;
   }
   
   .cobro-instructions {
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.75rem;
     text-align: center;
   }
   
   .cobro-actions {
     flex-direction: column;
   }
+  
+  .cobro-btn {
+    justify-content: center;
+    padding: 0.875rem 1.5rem;
+  }
+}
+
+/* Efectos especiales */
+.cobro-modal:hover {
+  box-shadow: 
+    0 30px 60px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.4);
+}
+
+/* Animación de éxito al confirmar */
+.cobro-modal.success {
+  animation: successPulse 0.6s ease-out;
+}
+
+@keyframes successPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
 }

@@ -1,4 +1,4 @@
-// src/App.tsx
+// src/App.tsx - Con sistema de permisos
 import React, { useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import Login from './pages/Login';
@@ -7,8 +7,12 @@ import Productos from './pages/Productos';
 import Inventario from './pages/Inventario';
 import Categorias from './pages/Categorias';
 import Proveedores from './pages/Proveedores';
+import Usuarios from './pages/Usuarios';
 import ProtectedRoute from './components/layout/ProtectedRoute';
+import { ProtectedRoute as PermissionProtectedRoute, NoPermissionsPage } from './components/auth/ProtectedRoute';
 import DashboardLayout from './components/layout/DashboardLayout';
+import './components/auth/ProtectedRoute.css';
+import { ALL_PERMISSIONS } from './types/permissions';
 
 const App: React.FC = () => {
   const navigate = useNavigate();
@@ -66,6 +70,9 @@ const App: React.FC = () => {
       {/* Redirigir la raíz a /login */}
       <Route path="/" element={<Navigate to="/login" replace />} />
 
+      {/* Ruta para mostrar "Sin permisos" */}
+      <Route path="/no-permisos" element={<NoPermissionsPage />} />
+
       {/* Rutas protegidas, envueltas en DashboardLayout */}
       <Route
         path="/*"
@@ -75,11 +82,66 @@ const App: React.FC = () => {
           </ProtectedRoute>
         }
       >
-        <Route path="ventas" element={<Venta />} />
-        <Route path="productos" element={<Productos />} />
-        <Route path="inventario" element={<Inventario />} />
-        <Route path="categorias" element={<Categorias />} />
-        <Route path="proveedores" element={<Proveedores />} />
+        {/* Página de Ventas - requiere permiso para crear ventas */}
+        <Route path="ventas" element={
+          <PermissionProtectedRoute 
+            permission={ALL_PERMISSIONS.VENTAS_CREAR}
+            redirectTo="/no-permisos"
+          >
+            <Venta />
+          </PermissionProtectedRoute>
+        } />
+        
+        {/* Página de Productos - requiere ver productos */}
+        <Route path="productos" element={
+          <PermissionProtectedRoute 
+            permission={ALL_PERMISSIONS.PRODUCTOS_VER}
+            redirectTo="/no-permisos"
+          >
+            <Productos />
+          </PermissionProtectedRoute>
+        } />
+        
+        {/* Página de Inventario - requiere ver stock */}
+        <Route path="inventario" element={
+          <PermissionProtectedRoute 
+            permission={ALL_PERMISSIONS.PRODUCTOS_VER_STOCK}
+            redirectTo="/no-permisos"
+          >
+            <Inventario />
+          </PermissionProtectedRoute>
+        } />
+        
+        {/* Página de Categorías - requiere ver categorías */}
+        <Route path="categorias" element={
+          <PermissionProtectedRoute 
+            permission={ALL_PERMISSIONS.CATEGORIAS_VER}
+            redirectTo="/no-permisos"
+          >
+            <Categorias />
+          </PermissionProtectedRoute>
+        } />
+        
+        {/* Página de Proveedores - requiere ver proveedores */}
+        <Route path="proveedores" element={
+          <PermissionProtectedRoute 
+            permission={ALL_PERMISSIONS.PROVEEDORES_VER}
+            redirectTo="/no-permisos"
+          >
+            <Proveedores />
+          </PermissionProtectedRoute>
+        } />
+        
+        {/* Página de Usuarios - Solo para administradores */}
+        <Route path="usuarios" element={
+          <PermissionProtectedRoute 
+            requireAdmin={true}
+            redirectTo="/no-permisos"
+          >
+            <Usuarios />
+          </PermissionProtectedRoute>
+        } />
+        
         {/* Cuando entres a /, redirige automáticamente a /ventas */}
         <Route index element={<Navigate to="ventas" replace />} />
       </Route>

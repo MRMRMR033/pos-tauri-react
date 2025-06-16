@@ -1,0 +1,151 @@
+// src/types/permissions.ts
+export interface Permission {
+  name: string;
+  description: string;
+  module: string;
+}
+
+export interface UserPermissions {
+  userId: number;
+  permissions: string[];
+}
+
+// Definición de todos los permisos disponibles en el sistema
+export const ALL_PERMISSIONS = {
+  // PRODUCTOS
+  PRODUCTOS_VER: 'productos:ver',
+  PRODUCTOS_VER_PRECIO_COSTO: 'productos:ver_precio_costo',
+  PRODUCTOS_VER_PRECIO_VENTA: 'productos:ver_precio_venta',
+  PRODUCTOS_CREAR: 'productos:crear',
+  PRODUCTOS_EDITAR: 'productos:editar',
+  PRODUCTOS_ELIMINAR: 'productos:eliminar',
+  PRODUCTOS_VER_STOCK: 'productos:ver_stock',
+  PRODUCTOS_AJUSTAR_STOCK: 'productos:ajustar_stock',
+
+  // VENTAS
+  VENTAS_CREAR: 'ventas:crear',
+  VENTAS_VER_PROPIAS: 'ventas:ver_propias',
+  VENTAS_VER_TODAS: 'ventas:ver_todas',
+  VENTAS_CANCELAR: 'ventas:cancelar',
+  VENTAS_APLICAR_DESCUENTO: 'ventas:aplicar_descuento',
+  VENTAS_EDITAR: 'ventas:editar',
+  VENTAS_ELIMINAR: 'ventas:eliminar',
+
+  // CAJA
+  CAJA_ABRIR: 'caja:abrir',
+  CAJA_CERRAR: 'caja:cerrar',
+  CAJA_VER_MOVIMIENTOS: 'caja:ver_movimientos',
+  CAJA_VER_MOVIMIENTOS_TODOS: 'caja:ver_movimientos_todos',
+  CAJA_REGISTRAR_ENTRADA: 'caja:registrar_entrada',
+  CAJA_REGISTRAR_SALIDA: 'caja:registrar_salida',
+
+  // USUARIOS
+  USUARIOS_VER_TODOS: 'usuarios:ver_todos',
+  USUARIOS_VER_PROPIO: 'usuarios:ver_propio',
+  USUARIOS_CREAR: 'usuarios:crear',
+  USUARIOS_EDITAR: 'usuarios:editar',
+  USUARIOS_ELIMINAR: 'usuarios:eliminar',
+  USUARIOS_GESTIONAR_PERMISOS: 'usuarios:gestionar_permisos',
+
+  // CATEGORÍAS
+  CATEGORIAS_VER: 'categorias:ver',
+  CATEGORIAS_CREAR: 'categorias:crear',
+  CATEGORIAS_EDITAR: 'categorias:editar',
+  CATEGORIAS_ELIMINAR: 'categorias:eliminar',
+
+  // PROVEEDORES
+  PROVEEDORES_VER: 'proveedores:ver',
+  PROVEEDORES_CREAR: 'proveedores:crear',
+  PROVEEDORES_EDITAR: 'proveedores:editar',
+  PROVEEDORES_ELIMINAR: 'proveedores:eliminar',
+
+  // SESIONES
+  SESIONES_VER_PROPIAS: 'sesiones:ver_propias',
+  SESIONES_VER_TODAS: 'sesiones:ver_todas',
+
+  // REPORTES
+  REPORTES_VENTAS_DIA: 'reportes:ventas_dia',
+  REPORTES_VENTAS_PERIODO: 'reportes:ventas_periodo',
+  REPORTES_INVENTARIO: 'reportes:inventario',
+  REPORTES_FINANCIEROS: 'reportes:financieros',
+} as const;
+
+// Permisos por defecto para empleados nuevos
+export const DEFAULT_EMPLOYEE_PERMISSIONS = [
+  ALL_PERMISSIONS.PRODUCTOS_VER,
+  ALL_PERMISSIONS.PRODUCTOS_VER_PRECIO_VENTA,
+  ALL_PERMISSIONS.PRODUCTOS_VER_STOCK,
+  ALL_PERMISSIONS.VENTAS_CREAR,
+  ALL_PERMISSIONS.VENTAS_VER_PROPIAS,
+  ALL_PERMISSIONS.CAJA_REGISTRAR_ENTRADA,
+  ALL_PERMISSIONS.CAJA_REGISTRAR_SALIDA,
+  ALL_PERMISSIONS.CAJA_VER_MOVIMIENTOS,
+  ALL_PERMISSIONS.CATEGORIAS_VER,
+  ALL_PERMISSIONS.PROVEEDORES_VER,
+  ALL_PERMISSIONS.USUARIOS_VER_PROPIO,
+  ALL_PERMISSIONS.SESIONES_VER_PROPIAS,
+];
+
+// Agrupación de permisos por módulos para la UI
+export const PERMISSIONS_BY_MODULE = {
+  productos: [
+    ALL_PERMISSIONS.PRODUCTOS_VER,
+    ALL_PERMISSIONS.PRODUCTOS_VER_PRECIO_COSTO,
+    ALL_PERMISSIONS.PRODUCTOS_VER_PRECIO_VENTA,
+    ALL_PERMISSIONS.PRODUCTOS_CREAR,
+    ALL_PERMISSIONS.PRODUCTOS_EDITAR,
+    ALL_PERMISSIONS.PRODUCTOS_ELIMINAR,
+    ALL_PERMISSIONS.PRODUCTOS_VER_STOCK,
+    ALL_PERMISSIONS.PRODUCTOS_AJUSTAR_STOCK,
+  ],
+  ventas: [
+    ALL_PERMISSIONS.VENTAS_CREAR,
+    ALL_PERMISSIONS.VENTAS_VER_PROPIAS,
+    ALL_PERMISSIONS.VENTAS_VER_TODAS,
+    ALL_PERMISSIONS.VENTAS_CANCELAR,
+    ALL_PERMISSIONS.VENTAS_APLICAR_DESCUENTO,
+    ALL_PERMISSIONS.VENTAS_EDITAR,
+    ALL_PERMISSIONS.VENTAS_ELIMINAR,
+  ],
+  caja: [
+    ALL_PERMISSIONS.CAJA_ABRIR,
+    ALL_PERMISSIONS.CAJA_CERRAR,
+    ALL_PERMISSIONS.CAJA_VER_MOVIMIENTOS,
+    ALL_PERMISSIONS.CAJA_VER_MOVIMIENTOS_TODOS,
+    ALL_PERMISSIONS.CAJA_REGISTRAR_ENTRADA,
+    ALL_PERMISSIONS.CAJA_REGISTRAR_SALIDA,
+  ],
+  usuarios: [
+    ALL_PERMISSIONS.USUARIOS_VER_TODOS,
+    ALL_PERMISSIONS.USUARIOS_VER_PROPIO,
+    ALL_PERMISSIONS.USUARIOS_CREAR,
+    ALL_PERMISSIONS.USUARIOS_EDITAR,
+    ALL_PERMISSIONS.USUARIOS_ELIMINAR,
+    ALL_PERMISSIONS.USUARIOS_GESTIONAR_PERMISOS,
+  ],
+  categorias: [
+    ALL_PERMISSIONS.CATEGORIAS_VER,
+    ALL_PERMISSIONS.CATEGORIAS_CREAR,
+    ALL_PERMISSIONS.CATEGORIAS_EDITAR,
+    ALL_PERMISSIONS.CATEGORIAS_ELIMINAR,
+  ],
+  proveedores: [
+    ALL_PERMISSIONS.PROVEEDORES_VER,
+    ALL_PERMISSIONS.PROVEEDORES_CREAR,
+    ALL_PERMISSIONS.PROVEEDORES_EDITAR,
+    ALL_PERMISSIONS.PROVEEDORES_ELIMINAR,
+  ],
+  sesiones: [
+    ALL_PERMISSIONS.SESIONES_VER_PROPIAS,
+    ALL_PERMISSIONS.SESIONES_VER_TODAS,
+  ],
+  reportes: [
+    ALL_PERMISSIONS.REPORTES_VENTAS_DIA,
+    ALL_PERMISSIONS.REPORTES_VENTAS_PERIODO,
+    ALL_PERMISSIONS.REPORTES_INVENTARIO,
+    ALL_PERMISSIONS.REPORTES_FINANCIEROS,
+  ],
+};
+
+export type PermissionKey = keyof typeof ALL_PERMISSIONS;
+export type PermissionValue = typeof ALL_PERMISSIONS[PermissionKey];

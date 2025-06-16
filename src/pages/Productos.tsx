@@ -1,7 +1,11 @@
-// src/pages/Productos.tsx
+// src/pages/Productos.tsx - Con sistema de permisos
 import React, { useState, useEffect, FormEvent, ChangeEvent } from 'react';
 import './Productos.css';
 import { createProducto, getCategorias, getProveedores, type Categoria, type Proveedor, type CreateProductoRequest } from '../api/products';
+import { ProtectedComponent, ProtectedButton } from '../components/auth/ProtectedComponent';
+import { usePermissions } from '../hooks/usePermissions';
+import { ALL_PERMISSIONS } from '../types/permissions';
+import '../components/auth/ProtectedComponent.css';
 
 interface ProductoFormFields {
   codigoBarras: string;
@@ -15,6 +19,8 @@ interface ProductoFormFields {
 }
 
 const Productos: React.FC = () => {
+  const { hasPermission } = usePermissions();
+  
   const [form, setForm] = useState<ProductoFormFields>({
     codigoBarras: '',
     nombre: '',
@@ -59,18 +65,35 @@ const Productos: React.FC = () => {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    
+    // Verificar permisos antes de enviar
+    if (!hasPermission(ALL_PERMISSIONS.PRODUCTOS_CREAR)) {
+      setError('No tienes permisos para crear productos');
+      return;
+    }
+    
     setLoading(true);
     setError(null);
     setSuccess(null);
 
     try {
+      // Construir datos del producto basado en permisos
       const productData: CreateProductoRequest = {
         codigoBarras: form.codigoBarras,
         nombre: form.nombre,
-        precioCosto: parseFloat(form.precioCosto),
-        precioVenta: parseFloat(form.precioVenta),
+        // Solo incluir precio de costo si tiene permiso
+        precioCosto: hasPermission(ALL_PERMISSIONS.PRODUCTOS_VER_PRECIO_COSTO) 
+          ? parseFloat(form.precioCosto || '0') 
+          : 0,
+        // Solo incluir precio de venta si tiene permiso
+        precioVenta: hasPermission(ALL_PERMISSIONS.PRODUCTOS_VER_PRECIO_VENTA) 
+          ? parseFloat(form.precioVenta || '0') 
+          : 0,
         precioEspecial: form.precioEspecial ? parseFloat(form.precioEspecial) : undefined,
-        stock: parseInt(form.stock),
+        // Solo incluir stock si tiene permiso
+        stock: hasPermission(ALL_PERMISSIONS.PRODUCTOS_VER_STOCK) 
+          ? parseInt(form.stock || '0') 
+          : 0,
         categoriaId: parseInt(form.categoriaId),
         proveedorId: parseInt(form.proveedorId),
       };
@@ -90,7 +113,11 @@ const Productos: React.FC = () => {
         proveedorId: '',
       });
     } catch (err: any) {
-      setError(err.message || 'Error al crear el producto');
+      if (err.message?.includes('permiso') || err.message?.includes('autorizado')) {
+        setError('No tienes permisos suficientes para realizar esta acción');
+      } else {
+        setError(err.message || 'Error al crear el producto');
+      }
     } finally {
       setLoading(false);
     }
@@ -128,19 +155,34 @@ const Productos: React.FC = () => {
           />
         </div>
 
-        <div className="form-group">
-          <label htmlFor="precioCosto">Precio de Costo</label>
-          <input
-            id="precioCosto"
-            name="precioCosto"
-            type="number"
-            step="0.01"
-            value={form.precioCosto}
-            onChange={handleChange}
-            required
-          />
-        </div>
+        {/* Campo de Precio de Costo - Solo visible con permiso */}
+        <ProtectedComponent 
+          permission={ALL_PERMISSIONS.PRODUCTOS_VER_PRECIO_COSTO}
+          fallback={
+            <div className="form-group">
+              <label>Precio de Costo</label>
+              <div className="permission-error inline">
+                <span className="error-text">Sin permisos para ver precio de costo</span>
+              </div>
+            </div>
+          }
+        >
+          <div className="form-group">
+            <label htmlFor="precioCosto">Precio de Costo</label>
+            <input
+              id="precioCosto"
+              name="precioCosto"
+              type="number"
+              step="0.01"
+              value={form.precioCosto}
+              onChange={handleChange}
+              required={hasPermission(ALL_PERMISSIONS.PRODUCTOS_VER_PRECIO_COSTO)}
+              disabled={!hasPermission(ALL_PERMISSIONS.PRODUCTOS_VER_PRECIO_COSTO)}
+            />
+          </div>
+        </ProtectedComponent>
 
+        {/* Campo de Precio de Venta - Solo editable con permiso */}
         <div className="form-group">
           <label htmlFor="precioVenta">Precio de Venta</label>
           <input
@@ -150,8 +192,15 @@ const Productos: React.FC = () => {
             step="0.01"
             value={form.precioVenta}
             onChange={handleChange}
-            required
+            required={hasPermission(ALL_PERMISSIONS.PRODUCTOS_VER_PRECIO_VENTA)}
+            disabled={!hasPermission(ALL_PERMISSIONS.PRODUCTOS_VER_PRECIO_VENTA)}
+            className={!hasPermission(ALL_PERMISSIONS.PRODUCTOS_VER_PRECIO_VENTA) ? 'protected-disabled' : ''}
           />
+          {!hasPermission(ALL_PERMISSIONS.PRODUCTOS_VER_PRECIO_VENTA) && (
+            <small className="permission-error inline">
+              <span className="error-text">Sin permisos para editar precio de venta</span>
+            </small>
+          )}
         </div>
 
         <div className="form-group">
@@ -166,17 +215,30 @@ const Productos: React.FC = () => {
           />
         </div>
 
-        <div className="form-group">
-          <label htmlFor="stock">Stock</label>
-          <input
-            id="stock"
-            name="stock"
-            type="number"
-            value={form.stock}
-            onChange={handleChange}
-            required
-          />
-        </div>
+        {/* Campo de Stock - Solo visible con permiso */}
+        <ProtectedComponent 
+          permission={ALL_PERMISSIONS.PRODUCTOS_VER_STOCK}
+          fallback={
+            <div className="form-group">
+              <label>Stock</label>
+              <div className="permission-error inline">
+                <span className="error-text">Sin permisos para ver stock</span>
+              </div>
+            </div>
+          }
+        >
+          <div className="form-group">
+            <label htmlFor="stock">Stock</label>
+            <input
+              id="stock"
+              name="stock"
+              type="number"
+              value={form.stock}
+              onChange={handleChange}
+              required
+            />
+          </div>
+        </ProtectedComponent>
 
         <div className="form-group">
           <label htmlFor="categoriaId">Categoría</label>
@@ -214,9 +276,20 @@ const Productos: React.FC = () => {
           </select>
         </div>
 
-        <button type="submit" className="producto-submit" disabled={loading}>
+        {/* Botón de guardar - Solo visible con permiso de crear */}
+        <ProtectedButton
+          permission={ALL_PERMISSIONS.PRODUCTOS_CREAR}
+          type="submit"
+          className="producto-submit"
+          disabled={loading}
+          fallback={
+            <div className="permission-error">
+              <span className="error-text">No tienes permisos para crear productos</span>
+            </div>
+          }
+        >
           {loading ? 'Guardando...' : 'Guardar Producto'}
-        </button>
+        </ProtectedButton>
       </form>
     </div>
   );

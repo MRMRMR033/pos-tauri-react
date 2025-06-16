@@ -1,10 +1,16 @@
-// src/pages/Proveedores.tsx
+// src/pages/Proveedores.tsx - Con sistema de permisos
 import React, { useState, useEffect, FormEvent, ChangeEvent } from 'react';
 import './Proveedores.css';
 import { getProveedores, type Proveedor } from '../api/products';
 import { createProveedor, updateProveedor, deleteProveedor, type CreateProveedorRequest } from '../api/suppliers';
+import { ProtectedComponent, ProtectedButton } from '../components/auth/ProtectedComponent';
+import { usePermissions } from '../hooks/usePermissions';
+import { ALL_PERMISSIONS } from '../types/permissions';
+import '../components/auth/ProtectedComponent.css';
 
 const Proveedores: React.FC = () => {
+  const { hasPermission } = usePermissions();
+  
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
   const [form, setForm] = useState<CreateProveedorRequest>({ 
     nombre: '', 
@@ -36,6 +42,14 @@ const Proveedores: React.FC = () => {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    
+    // Verificar permisos
+    const requiredPermission = editingId ? ALL_PERMISSIONS.PROVEEDORES_EDITAR : ALL_PERMISSIONS.PROVEEDORES_CREAR;
+    if (!hasPermission(requiredPermission)) {
+      setError(`No tienes permisos para ${editingId ? 'editar' : 'crear'} proveedores`);
+      return;
+    }
+    
     setLoading(true);
     setError(null);
     setSuccess(null);
@@ -58,7 +72,11 @@ const Proveedores: React.FC = () => {
       setForm({ nombre: '', contacto: '' });
       await loadProveedores();
     } catch (err: any) {
-      setError(err.message || 'Error al procesar el proveedor');
+      if (err.message?.includes('permiso') || err.message?.includes('autorizado')) {
+        setError('No tienes permisos suficientes para realizar esta acción');
+      } else {
+        setError(err.message || 'Error al procesar el proveedor');
+      }
     } finally {
       setLoading(false);
     }
@@ -75,6 +93,12 @@ const Proveedores: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
+    // Verificar permisos
+    if (!hasPermission(ALL_PERMISSIONS.PROVEEDORES_ELIMINAR)) {
+      setError('No tienes permisos para eliminar proveedores');
+      return;
+    }
+    
     if (!confirm('¿Estás seguro de que quieres eliminar este proveedor?')) {
       return;
     }
@@ -84,7 +108,11 @@ const Proveedores: React.FC = () => {
       setSuccess('Proveedor eliminado exitosamente');
       await loadProveedores();
     } catch (err: any) {
-      setError(err.message || 'Error al eliminar el proveedor');
+      if (err.message?.includes('permiso') || err.message?.includes('autorizado')) {
+        setError('No tienes permisos suficientes para realizar esta acción');
+      } else {
+        setError(err.message || 'Error al eliminar el proveedor');
+      }
     }
   };
 
@@ -128,9 +156,23 @@ const Proveedores: React.FC = () => {
         </div>
         
         <div className="form-actions">
-          <button type="submit" className="submit-btn" disabled={loading}>
+          {/* Botón de crear/editar - Con protección de permisos */}
+          <ProtectedButton
+            permission={editingId ? ALL_PERMISSIONS.PROVEEDORES_EDITAR : ALL_PERMISSIONS.PROVEEDORES_CREAR}
+            type="submit"
+            className="submit-btn"
+            disabled={loading}
+            fallback={
+              <div className="permission-error">
+                <span className="error-text">
+                  No tienes permisos para {editingId ? 'editar' : 'crear'} proveedores
+                </span>
+              </div>
+            }
+          >
             {loading ? 'Procesando...' : editingId ? 'Actualizar' : 'Crear'}
-          </button>
+          </ProtectedButton>
+          
           {editingId && (
             <button type="button" className="cancel-btn" onClick={handleCancelEdit}>
               Cancelar
@@ -149,18 +191,23 @@ const Proveedores: React.FC = () => {
                 <p className="proveedor-contacto">{proveedor.contacto}</p>
               )}
               <div className="proveedor-actions">
-                <button 
-                  className="edit-btn" 
+                {/* Botón de editar - Solo con permisos */}
+                <ProtectedButton
+                  permission={ALL_PERMISSIONS.PROVEEDORES_EDITAR}
+                  className="edit-btn"
                   onClick={() => handleEdit(proveedor)}
                 >
                   Editar
-                </button>
-                <button 
-                  className="delete-btn" 
+                </ProtectedButton>
+                
+                {/* Botón de eliminar - Solo con permisos */}
+                <ProtectedButton
+                  permission={ALL_PERMISSIONS.PROVEEDORES_ELIMINAR}
+                  className="delete-btn"
                   onClick={() => handleDelete(proveedor.id)}
                 >
                   Eliminar
-                </button>
+                </ProtectedButton>
               </div>
             </div>
           ))}
