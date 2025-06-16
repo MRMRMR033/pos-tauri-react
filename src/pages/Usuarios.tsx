@@ -1,9 +1,8 @@
 // src/pages/Usuarios.tsx - Gestión de usuarios y permisos (Solo admins)
 import React, { useState, useEffect } from 'react';
 import { usePermissions } from '../hooks/usePermissions';
-import { ProtectedComponent } from '../components/auth/ProtectedComponent';
 import { ALL_PERMISSIONS, PERMISSIONS_BY_MODULE, DEFAULT_EMPLOYEE_PERMISSIONS } from '../types/permissions';
-import { getUserPermissions, getAllPermissions, grantPermission, revokePermission } from '../api/auth';
+import { getAllPermissions, grantPermission, revokePermission } from '../api/auth';
 import '../components/auth/ProtectedComponent.css';
 import './Usuarios.css';
 
@@ -23,7 +22,6 @@ const Usuarios: React.FC = () => {
   const { isAdmin, accessToken } = usePermissions();
   const [users, setUsers] = useState<UserWithPermissions[]>([]);
   const [selectedUser, setSelectedUser] = useState<UserWithPermissions | null>(null);
-  const [availablePermissions, setAvailablePermissions] = useState<{name: string; description: string; module: string}[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -87,16 +85,9 @@ const Usuarios: React.FC = () => {
 
         // Cargar permisos disponibles
         try {
-          const perms = await getAllPermissions(accessToken);
-          setAvailablePermissions(perms);
+          await getAllPermissions(accessToken);
         } catch (err) {
-          // Usar permisos por defecto si falla la API
-          const defaultPerms = Object.entries(ALL_PERMISSIONS).map(([key, value]) => ({
-            name: value,
-            description: key.replace(/_/g, ' ').toLowerCase(),
-            module: value.split(':')[0]
-          }));
-          setAvailablePermissions(defaultPerms);
+          console.error('Error cargando permisos:', err);
         }
       } catch (err: any) {
         setError(err.message || 'Error al cargar usuarios');
@@ -164,15 +155,6 @@ const Usuarios: React.FC = () => {
     }
   };
 
-  const getUserPermissionsByModule = (userPermissions: string[]) => {
-    const byModule: {[key: string]: string[]} = {};
-    
-    Object.entries(PERMISSIONS_BY_MODULE).forEach(([module, permissions]) => {
-      byModule[module] = permissions.filter(p => userPermissions.includes(p));
-    });
-    
-    return byModule;
-  };
 
   if (!isAdmin()) {
     return (

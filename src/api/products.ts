@@ -1,20 +1,22 @@
-// src/api/products.ts
+// src/api/products.ts - Integración completa con API de NestJS
 import { fetch } from '@tauri-apps/plugin-http';
 
 const API_URL = 'http://localhost:3000';
 
 export interface Producto {
   id: number;
-  codigoBarras: string;
+  codigoBarras?: string;
   nombre: string;
+  descripcion?: string;
   precioCosto: number;
   precioVenta: number;
-  precioEspecial?: number;
   stock: number;
-  categoriaId: number;
-  proveedorId: number;
-  categoria: Categoria;
-  proveedor: Proveedor;
+  stockMinimo?: number;
+  categoriaId?: number; // Opcional
+  proveedorId?: number; // Opcional
+  categoria?: Categoria; // Opcional
+  proveedor?: Proveedor; // Opcional
+  activo?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -22,74 +24,87 @@ export interface Producto {
 export interface Categoria {
   id: number;
   nombre: string;
+  descripcion?: string;
+  activa?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Proveedor {
   id: number;
   nombre: string;
   contacto?: string;
+  telefono?: string;
+  email?: string;
+  direccion?: string;
+  activo?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface CreateProductoRequest {
-  codigoBarras: string;
+  codigoBarras?: string;
   nombre: string;
+  descripcion?: string;
   precioCosto: number;
   precioVenta: number;
-  precioEspecial?: number;
   stock: number;
-  categoriaId: number;
-  proveedorId: number;
+  stockMinimo?: number;
+  categoriaId?: number; // Opcional - si no se proporciona será "Sin categoría"
+  proveedorId?: number; // Opcional
+  activo?: boolean;
 }
 
-function getAuthHeaders(): HeadersInit {
-  const token = localStorage.getItem('token');
+function getAuthHeaders(token?: string): HeadersInit {
+  const authToken = token || localStorage.getItem('token');
   return {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`,
+    'Authorization': `Bearer ${authToken}`,
   };
 }
 
-export async function getCategorias(): Promise<Categoria[]> {
+// ========== PRODUCTOS ==========
+export async function getProductos(token?: string): Promise<Producto[]> {
   try {
-    const res = await fetch(`${API_URL}/categorias`, {
+    const res = await fetch(`${API_URL}/producto`, {
       method: 'GET',
-      headers: getAuthHeaders(),
+      headers: getAuthHeaders(token),
     });
     
     if (!res.ok) {
-      throw new Error(`Error ${res.status}: No se pudieron obtener las categor�as`);
+      throw new Error(`Error ${res.status}: No se pudieron obtener los productos`);
     }
     
     return await res.json();
   } catch (error) {
-    console.error('Error en getCategorias:', error);
+    console.error('Error en getProductos:', error);
     throw error;
   }
 }
 
-export async function getProveedores(): Promise<Proveedor[]> {
+export async function getProductoById(id: number, token?: string): Promise<Producto> {
   try {
-    const res = await fetch(`${API_URL}/proveedores`, {
+    const res = await fetch(`${API_URL}/producto/${id}`, {
       method: 'GET',
-      headers: getAuthHeaders(),
+      headers: getAuthHeaders(token),
     });
     
     if (!res.ok) {
-      throw new Error(`Error ${res.status}: No se pudieron obtener los proveedores`);
+      throw new Error(`Error ${res.status}: No se pudo obtener el producto`);
     }
     
     return await res.json();
   } catch (error) {
-    console.error('Error en getProveedores:', error);
+    console.error('Error en getProductoById:', error);
     throw error;
   }
 }
 
-export async function createProducto(data: CreateProductoRequest): Promise<Producto> {
+export async function createProducto(data: CreateProductoRequest, token?: string): Promise<Producto> {
   try {
-    const res = await fetch(`${API_URL}/productos`, {
+    const res = await fetch(`${API_URL}/producto`, {
       method: 'POST',
-      headers: getAuthHeaders(),
+      headers: getAuthHeaders(token),
       body: JSON.stringify(data),
     });
     
@@ -106,51 +121,11 @@ export async function createProducto(data: CreateProductoRequest): Promise<Produ
   }
 }
 
-export async function getProductos(): Promise<Producto[]> {
+export async function updateProducto(id: number, data: Partial<CreateProductoRequest>, token?: string): Promise<Producto> {
   try {
-    const res = await fetch(`${API_URL}/productos`, {
-      method: 'GET',
-      headers: getAuthHeaders(),
-    });
-    
-    if (!res.ok) {
-      throw new Error(`Error ${res.status}: No se pudieron obtener los productos`);
-    }
-    
-    return await res.json();
-  } catch (error) {
-    console.error('Error en getProductos:', error);
-    throw error;
-  }
-}
-
-export async function getProductoByBarcode(codigo: string): Promise<Producto | null> {
-  try {
-    const res = await fetch(`${API_URL}/productos/barcode/${codigo}`, {
-      method: 'GET',
-      headers: getAuthHeaders(),
-    });
-    
-    if (res.status === 404) {
-      return null;
-    }
-    
-    if (!res.ok) {
-      throw new Error(`Error ${res.status}: No se pudo obtener el producto`);
-    }
-    
-    return await res.json();
-  } catch (error) {
-    console.error('Error en getProductoByBarcode:', error);
-    throw error;
-  }
-}
-
-export async function updateProducto(id: number, data: Partial<CreateProductoRequest>): Promise<Producto> {
-  try {
-    const res = await fetch(`${API_URL}/productos/${id}`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
+    const res = await fetch(`${API_URL}/producto/${id}`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(token),
       body: JSON.stringify(data),
     });
     
@@ -167,11 +142,11 @@ export async function updateProducto(id: number, data: Partial<CreateProductoReq
   }
 }
 
-export async function deleteProducto(id: number): Promise<void> {
+export async function deleteProducto(id: number, token?: string): Promise<void> {
   try {
-    const res = await fetch(`${API_URL}/productos/${id}`, {
+    const res = await fetch(`${API_URL}/producto/${id}`, {
       method: 'DELETE',
-      headers: getAuthHeaders(),
+      headers: getAuthHeaders(token),
     });
     
     if (!res.ok) {
@@ -179,6 +154,91 @@ export async function deleteProducto(id: number): Promise<void> {
     }
   } catch (error) {
     console.error('Error en deleteProducto:', error);
+    throw error;
+  }
+}
+
+// ========== CATEGORÍAS ==========
+export async function getCategorias(token?: string): Promise<Categoria[]> {
+  try {
+    const res = await fetch(`${API_URL}/categoria`, {
+      method: 'GET',
+      headers: getAuthHeaders(token),
+    });
+    
+    if (!res.ok) {
+      throw new Error(`Error ${res.status}: No se pudieron obtener las categorías`);
+    }
+    
+    return await res.json();
+  } catch (error) {
+    console.error('Error en getCategorias:', error);
+    throw error;
+  }
+}
+
+export async function getCategoriaById(id: number, token?: string): Promise<Categoria> {
+  try {
+    const res = await fetch(`${API_URL}/categoria/${id}`, {
+      method: 'GET',
+      headers: getAuthHeaders(token),
+    });
+    
+    if (!res.ok) {
+      throw new Error(`Error ${res.status}: No se pudo obtener la categoría`);
+    }
+    
+    return await res.json();
+  } catch (error) {
+    console.error('Error en getCategoriaById:', error);
+    throw error;
+  }
+}
+
+// ========== PROVEEDORES ==========
+export async function getProveedores(token?: string): Promise<Proveedor[]> {
+  try {
+    const res = await fetch(`${API_URL}/proveedor`, {
+      method: 'GET',
+      headers: getAuthHeaders(token),
+    });
+    
+    if (!res.ok) {
+      throw new Error(`Error ${res.status}: No se pudieron obtener los proveedores`);
+    }
+    
+    return await res.json();
+  } catch (error) {
+    console.error('Error en getProveedores:', error);
+    throw error;
+  }
+}
+
+export async function getProveedorById(id: number, token?: string): Promise<Proveedor> {
+  try {
+    const res = await fetch(`${API_URL}/proveedor/${id}`, {
+      method: 'GET',
+      headers: getAuthHeaders(token),
+    });
+    
+    if (!res.ok) {
+      throw new Error(`Error ${res.status}: No se pudo obtener el proveedor`);
+    }
+    
+    return await res.json();
+  } catch (error) {
+    console.error('Error en getProveedorById:', error);
+    throw error;
+  }
+}
+
+// Función auxiliar para buscar producto por código de barras
+export async function getProductoByBarcode(codigo: string, token?: string): Promise<Producto | null> {
+  try {
+    const productos = await getProductos(token);
+    return productos.find(p => p.codigoBarras === codigo) || null;
+  } catch (error) {
+    console.error('Error en getProductoByBarcode:', error);
     throw error;
   }
 }

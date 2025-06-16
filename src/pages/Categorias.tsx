@@ -1,15 +1,14 @@
 // src/pages/Categorias.tsx - Con sistema de permisos
 import React, { useState, useEffect, FormEvent, ChangeEvent } from 'react';
 import './Categorias.css';
-import { getCategorias, createCategoria, updateCategoria, deleteCategoria, type Categoria } from '../api/products';
-import { createCategoria as createCategoriaApi, updateCategoria as updateCategoriaApi, deleteCategoria as deleteCategoriaApi } from '../api/categories';
-import { ProtectedComponent, ProtectedButton } from '../components/auth/ProtectedComponent';
+import { getCategorias, createCategoria, updateCategoria, deleteCategoria, type Categoria } from '../api/categories';
+import { ProtectedButton } from '../components/auth/ProtectedComponent';
 import { usePermissions } from '../hooks/usePermissions';
 import { ALL_PERMISSIONS } from '../types/permissions';
 import '../components/auth/ProtectedComponent.css';
 
 const Categorias: React.FC = () => {
-  const { hasPermission } = usePermissions();
+  const { hasPermission, accessToken } = usePermissions();
   
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [form, setForm] = useState({ nombre: '' });
@@ -24,7 +23,7 @@ const Categorias: React.FC = () => {
 
   const loadCategorias = async () => {
     try {
-      const data = await getCategorias();
+      const data = await getCategorias(accessToken || undefined);
       setCategorias(data);
     } catch (err: any) {
       setError('Error al cargar categorías');
@@ -53,11 +52,11 @@ const Categorias: React.FC = () => {
 
     try {
       if (editingId) {
-        await updateCategoriaApi(editingId, form);
+        await updateCategoria(editingId, form, accessToken || undefined);
         setSuccess('Categoría actualizada exitosamente');
         setEditingId(null);
       } else {
-        await createCategoriaApi(form);
+        await createCategoria(form, accessToken || undefined);
         setSuccess('Categoría creada exitosamente');
       }
       
@@ -87,7 +86,7 @@ const Categorias: React.FC = () => {
     }
 
     try {
-      await deleteCategoriaApi(id);
+      await deleteCategoria(id, accessToken || undefined);
       setSuccess('Categoría eliminada exitosamente');
       await loadCategorias();
     } catch (err: any) {

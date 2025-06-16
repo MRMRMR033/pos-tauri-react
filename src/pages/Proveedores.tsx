@@ -1,15 +1,14 @@
 // src/pages/Proveedores.tsx - Con sistema de permisos
 import React, { useState, useEffect, FormEvent, ChangeEvent } from 'react';
 import './Proveedores.css';
-import { getProveedores, type Proveedor } from '../api/products';
-import { createProveedor, updateProveedor, deleteProveedor, type CreateProveedorRequest } from '../api/suppliers';
-import { ProtectedComponent, ProtectedButton } from '../components/auth/ProtectedComponent';
+import { getProveedores, createProveedor, updateProveedor, deleteProveedor, type Proveedor, type CreateProveedorRequest } from '../api/suppliers';
+import { ProtectedButton } from '../components/auth/ProtectedComponent';
 import { usePermissions } from '../hooks/usePermissions';
 import { ALL_PERMISSIONS } from '../types/permissions';
 import '../components/auth/ProtectedComponent.css';
 
 const Proveedores: React.FC = () => {
-  const { hasPermission } = usePermissions();
+  const { hasPermission, accessToken } = usePermissions();
   
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
   const [form, setForm] = useState<CreateProveedorRequest>({ 
@@ -27,7 +26,7 @@ const Proveedores: React.FC = () => {
 
   const loadProveedores = async () => {
     try {
-      const data = await getProveedores();
+      const data = await getProveedores(accessToken || undefined);
       setProveedores(data);
     } catch (err: any) {
       setError('Error al cargar proveedores');
@@ -61,11 +60,11 @@ const Proveedores: React.FC = () => {
       };
 
       if (editingId) {
-        await updateProveedor(editingId, formData);
+        await updateProveedor(editingId, formData, accessToken || undefined);
         setSuccess('Proveedor actualizado exitosamente');
         setEditingId(null);
       } else {
-        await createProveedor(formData);
+        await createProveedor(formData, accessToken || undefined);
         setSuccess('Proveedor creado exitosamente');
       }
       
@@ -104,7 +103,7 @@ const Proveedores: React.FC = () => {
     }
 
     try {
-      await deleteProveedor(id);
+      await deleteProveedor(id, accessToken || undefined);
       setSuccess('Proveedor eliminado exitosamente');
       await loadProveedores();
     } catch (err: any) {

@@ -1,27 +1,78 @@
-// src/api/suppliers.ts
+// src/api/suppliers.ts - API completa para proveedores con NestJS
 import { fetch } from '@tauri-apps/plugin-http';
-import type { Proveedor } from './products';
 
 const API_URL = 'http://localhost:3000';
+
+export interface Proveedor {
+  id: number;
+  nombre: string;
+  contacto?: string;
+  telefono?: string;
+  email?: string;
+  direccion?: string;
+  activo?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
 export interface CreateProveedorRequest {
   nombre: string;
   contacto?: string;
+  telefono?: string;
+  email?: string;
+  direccion?: string;
+  activo?: boolean;
 }
 
-function getAuthHeaders(): HeadersInit {
-  const token = localStorage.getItem('token');
+function getAuthHeaders(token?: string): HeadersInit {
+  const authToken = token || localStorage.getItem('token');
   return {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`,
+    'Authorization': `Bearer ${authToken}`,
   };
 }
 
-export async function createProveedor(data: CreateProveedorRequest): Promise<Proveedor> {
+export async function getProveedores(token?: string): Promise<Proveedor[]> {
   try {
-    const res = await fetch(`${API_URL}/proveedores`, {
+    const res = await fetch(`${API_URL}/proveedor`, {
+      method: 'GET',
+      headers: getAuthHeaders(token),
+    });
+    
+    if (!res.ok) {
+      throw new Error(`Error ${res.status}: No se pudieron obtener los proveedores`);
+    }
+    
+    return await res.json();
+  } catch (error) {
+    console.error('Error en getProveedores:', error);
+    throw error;
+  }
+}
+
+export async function getProveedorById(id: number, token?: string): Promise<Proveedor> {
+  try {
+    const res = await fetch(`${API_URL}/proveedor/${id}`, {
+      method: 'GET',
+      headers: getAuthHeaders(token),
+    });
+    
+    if (!res.ok) {
+      throw new Error(`Error ${res.status}: No se pudo obtener el proveedor`);
+    }
+    
+    return await res.json();
+  } catch (error) {
+    console.error('Error en getProveedorById:', error);
+    throw error;
+  }
+}
+
+export async function createProveedor(data: CreateProveedorRequest, token?: string): Promise<Proveedor> {
+  try {
+    const res = await fetch(`${API_URL}/proveedor`, {
       method: 'POST',
-      headers: getAuthHeaders(),
+      headers: getAuthHeaders(token),
       body: JSON.stringify(data),
     });
     
@@ -38,11 +89,11 @@ export async function createProveedor(data: CreateProveedorRequest): Promise<Pro
   }
 }
 
-export async function updateProveedor(id: number, data: CreateProveedorRequest): Promise<Proveedor> {
+export async function updateProveedor(id: number, data: Partial<CreateProveedorRequest>, token?: string): Promise<Proveedor> {
   try {
-    const res = await fetch(`${API_URL}/proveedores/${id}`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
+    const res = await fetch(`${API_URL}/proveedor/${id}`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(token),
       body: JSON.stringify(data),
     });
     
@@ -59,11 +110,11 @@ export async function updateProveedor(id: number, data: CreateProveedorRequest):
   }
 }
 
-export async function deleteProveedor(id: number): Promise<void> {
+export async function deleteProveedor(id: number, token?: string): Promise<void> {
   try {
-    const res = await fetch(`${API_URL}/proveedores/${id}`, {
+    const res = await fetch(`${API_URL}/proveedor/${id}`, {
       method: 'DELETE',
-      headers: getAuthHeaders(),
+      headers: getAuthHeaders(token),
     });
     
     if (!res.ok) {

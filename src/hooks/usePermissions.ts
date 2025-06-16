@@ -27,6 +27,8 @@ export const usePermissions = () => {
   return {
     // Lista completa de permisos del usuario
     permissions,
+    // Token de acceso
+    accessToken,
     
     // Verificar si tiene un permiso específico
     hasPermission,
