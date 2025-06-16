@@ -1,6 +1,7 @@
 // src/pages/Productos.tsx
-import React, { useState, FormEvent, ChangeEvent } from 'react';
+import React, { useState, useEffect, FormEvent, ChangeEvent } from 'react';
 import './Productos.css';
+import { createProducto, getCategorias, getProveedores, type Categoria, type Proveedor, type CreateProductoRequest } from '../api/products';
 
 interface ProductoFormFields {
   codigoBarras: string;
@@ -24,6 +25,30 @@ const Productos: React.FC = () => {
     categoriaId: '',
     proveedorId: '',
   });
+  
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [proveedores, setProveedores] = useState<Proveedor[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [categoriasData, proveedoresData] = await Promise.all([
+          getCategorias(),
+          getProveedores()
+        ]);
+        setCategorias(categoriasData);
+        setProveedores(proveedoresData);
+      } catch (err) {
+        setError('Error al cargar categorías y proveedores');
+        console.error('Error loading data:', err);
+      }
+    };
+    
+    loadData();
+  }, []);
 
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -32,15 +57,52 @@ const Productos: React.FC = () => {
     setForm((f) => ({ ...f, [name]: value }));
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    // TODO: enviar form a la API
-    console.log('Guardar producto', form);
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const productData: CreateProductoRequest = {
+        codigoBarras: form.codigoBarras,
+        nombre: form.nombre,
+        precioCosto: parseFloat(form.precioCosto),
+        precioVenta: parseFloat(form.precioVenta),
+        precioEspecial: form.precioEspecial ? parseFloat(form.precioEspecial) : undefined,
+        stock: parseInt(form.stock),
+        categoriaId: parseInt(form.categoriaId),
+        proveedorId: parseInt(form.proveedorId),
+      };
+
+      await createProducto(productData);
+      setSuccess('Producto creado exitosamente');
+      
+      // Limpiar formulario
+      setForm({
+        codigoBarras: '',
+        nombre: '',
+        precioCosto: '',
+        precioVenta: '',
+        precioEspecial: '',
+        stock: '',
+        categoriaId: '',
+        proveedorId: '',
+      });
+    } catch (err: any) {
+      setError(err.message || 'Error al crear el producto');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="producto-page">
       <h1 className="producto-title">Agregar Producto</h1>
+      
+      {error && <div className="error-message">{error}</div>}
+      {success && <div className="success-message">{success}</div>}
+      
       <form className="producto-form" onSubmit={handleSubmit}>
         <div className="form-group">
           <label htmlFor="codigoBarras">Código de Barras</label>
@@ -126,7 +188,11 @@ const Productos: React.FC = () => {
             required
           >
             <option value="">Selecciona categoría</option>
-            {/* Opciones dinámicas desde tu API */}
+            {categorias.map((categoria) => (
+              <option key={categoria.id} value={categoria.id}>
+                {categoria.nombre}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -140,12 +206,16 @@ const Productos: React.FC = () => {
             required
           >
             <option value="">Selecciona proveedor</option>
-            {/* Opciones dinámicas desde tu API */}
+            {proveedores.map((proveedor) => (
+              <option key={proveedor.id} value={proveedor.id}>
+                {proveedor.nombre} {proveedor.contacto && `(${proveedor.contacto})`}
+              </option>
+            ))}
           </select>
         </div>
 
-        <button type="submit" className="producto-submit">
-          Guardar Producto
+        <button type="submit" className="producto-submit" disabled={loading}>
+          {loading ? 'Guardando...' : 'Guardar Producto'}
         </button>
       </form>
     </div>

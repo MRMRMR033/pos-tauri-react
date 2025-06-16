@@ -5,6 +5,8 @@ import Login from './pages/Login';
 import Venta from './pages/Venta';
 import Productos from './pages/Productos';
 import Inventario from './pages/Inventario';
+import Categorias from './pages/Categorias';
+import Proveedores from './pages/Proveedores';
 import ProtectedRoute from './components/layout/ProtectedRoute';
 import DashboardLayout from './components/layout/DashboardLayout';
 
@@ -35,6 +37,14 @@ const App: React.FC = () => {
         case 'F4':
           event.preventDefault();
           navigate('/inventario');
+          break;
+        case 'F12':
+          event.preventDefault();
+          // Solo abrir modal de cobro si estamos en la página de ventas
+          if (location.pathname === '/ventas') {
+            // Disparar evento personalizado para que Venta.tsx abra el modal
+            window.dispatchEvent(new CustomEvent('openCobroModal'));
+          }
           break;
       }
     };
@@ -68,6 +78,8 @@ const App: React.FC = () => {
         <Route path="ventas" element={<Venta />} />
         <Route path="productos" element={<Productos />} />
         <Route path="inventario" element={<Inventario />} />
+        <Route path="categorias" element={<Categorias />} />
+        <Route path="proveedores" element={<Proveedores />} />
         {/* Cuando entres a /, redirige automáticamente a /ventas */}
         <Route index element={<Navigate to="ventas" replace />} />
       </Route>

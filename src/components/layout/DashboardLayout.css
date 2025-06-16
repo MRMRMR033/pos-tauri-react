@@ -28,6 +28,15 @@
   .dl-header__brand {
     font-size: 1.25rem;
     font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .dl-user-info {
+    font-size: 0.875rem;
+    font-weight: normal;
+    color: #d1d5db;
   }
   
   .dl-header__logout {

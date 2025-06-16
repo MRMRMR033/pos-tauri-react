@@ -1,0 +1,222 @@
+/* src/components/modals/CobroModal.css */
+
+.cobro-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.cobro-modal {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  width: 400px;
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow: hidden;
+  animation: modalSlideIn 0.2s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    transform: translateY(-50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.cobro-modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  background: #3b82f6;
+  color: white;
+}
+
+.cobro-modal__header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.cobro-modal__close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.cobro-modal__close:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.cobro-modal__content {
+  padding: 1.5rem;
+}
+
+.cobro-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: #f3f4f6;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+}
+
+.cobro-label {
+  font-weight: 500;
+  color: #374151;
+}
+
+.cobro-amount {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.cobro-amount.negative {
+  color: #dc2626;
+}
+
+.cobro-amount.positive {
+  color: #059669;
+}
+
+.cobro-input-group {
+  margin-bottom: 1rem;
+}
+
+.cobro-input-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.cobro-input-group input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 1.125rem;
+  text-align: right;
+  box-sizing: border-box;
+}
+
+.cobro-input-group input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+}
+
+.cobro-cambio {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: #f9fafb;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.cobro-error {
+  color: #dc2626;
+  background: #fee;
+  padding: 0.75rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  text-align: center;
+  font-weight: 500;
+}
+
+.cobro-modal__footer {
+  padding: 1.5rem;
+  background: #f9fafb;
+  border-top: 1px solid #e5e7eb;
+}
+
+.cobro-instructions {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.cobro-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.cobro-btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cobro-btn--cancel {
+  background: #6b7280;
+  color: white;
+}
+
+.cobro-btn--cancel:hover {
+  background: #4b5563;
+}
+
+.cobro-btn--confirm {
+  background: #059669;
+  color: white;
+}
+
+.cobro-btn--confirm:hover:not(.disabled) {
+  background: #047857;
+}
+
+.cobro-btn--confirm.disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .cobro-modal {
+    width: 95vw;
+    margin: 0 auto;
+  }
+  
+  .cobro-instructions {
+    flex-direction: column;
+    gap: 0.5rem;
+    text-align: center;
+  }
+  
+  .cobro-actions {
+    flex-direction: column;
+  }
+}

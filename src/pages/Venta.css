@@ -117,7 +117,16 @@
     transition: background-color 0.2s;
   }
   
-  .venta-process-button:hover {
+  .venta-process-button:hover:not(:disabled) {
     background-color: #15803d;
+  }
+  
+  .venta-process-button:disabled {
+    background-color: #9ca3af;
+    cursor: not-allowed;
+  }
+  
+  .text-gray-500 {
+    color: #6b7280;
   }
   
