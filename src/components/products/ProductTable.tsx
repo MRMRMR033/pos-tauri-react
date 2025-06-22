@@ -52,10 +52,9 @@ const ProductTable: React.FC<ProductTableProps> = ({
     }).format(amount);
   };
 
-  const getStockStatus = (stock: number, stockMinimo?: number) => {
-    if (!stockMinimo) return 'normal';
+  const getStockStatus = (stock: number) => {
     if (stock === 0) return 'agotado';
-    if (stock <= stockMinimo) return 'bajo';
+    if (stock <= 5) return 'bajo';  // Stock bajo = 5 o menos
     return 'normal';
   };
 
@@ -116,6 +115,13 @@ const ProductTable: React.FC<ProductTableProps> = ({
                 Precio Venta {getSortIcon('precioVenta')}
               </th>
               
+              <th 
+                className="sortable text-right"
+                onClick={() => onSort('precioEspecial')}
+              >
+                Precio Especial {getSortIcon('precioEspecial')}
+              </th>
+              
               {/* Columna de stock - Solo visible con permiso */}
               <ProtectedComponent permission={ALL_PERMISSIONS.PRODUCTOS_VER_STOCK}>
                 <th 
@@ -140,9 +146,6 @@ const ProductTable: React.FC<ProductTableProps> = ({
                 <td className="producto-nombre">
                   <div className="nombre-container">
                     <span className="nombre">{producto.nombre}</span>
-                    {producto.descripcion && (
-                      <span className="descripcion">{producto.descripcion}</span>
-                    )}
                   </div>
                 </td>
                 
@@ -167,13 +170,20 @@ const ProductTable: React.FC<ProductTableProps> = ({
                   <strong>{formatCurrency(producto.precioVenta)}</strong>
                 </td>
                 
+                <td className="precio-especial text-right">
+                  {producto.precioEspecial ? 
+                    formatCurrency(producto.precioEspecial) : 
+                    <span className="text-muted">-</span>
+                  }
+                </td>
+                
                 {/* Stock - Solo visible con permiso */}
                 <ProtectedComponent permission={ALL_PERMISSIONS.PRODUCTOS_VER_STOCK}>
                   <td className="stock text-center">
-                    <span className={`stock-badge stock-${getStockStatus(producto.stock, producto.stockMinimo)}`}>
+                    <span className={`stock-badge stock-${getStockStatus(producto.stock)}`}>
                       {producto.stock}
-                      {getStockStatus(producto.stock, producto.stockMinimo) === 'agotado' && ' ⚠️'}
-                      {getStockStatus(producto.stock, producto.stockMinimo) === 'bajo' && ' ⚠️'}
+                      {getStockStatus(producto.stock) === 'agotado' && ' ⚠️'}
+                      {getStockStatus(producto.stock) === 'bajo' && ' ⚠️'}
                     </span>
                   </td>
                 </ProtectedComponent>

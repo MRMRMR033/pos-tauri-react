@@ -254,6 +254,20 @@ body {
   color: var(--text-primary);
 }
 
+/* Asegurar que TODOS los inputs, textareas y selects tengan color visible */
+input, textarea, select {
+  color: var(--text-primary) !important;
+}
+
+input:focus, textarea:focus, select:focus {
+  color: var(--text-primary) !important;
+}
+
+input:disabled, textarea:disabled, select:disabled {
+  color: var(--text-primary) !important;
+  opacity: 0.6;
+}
+
 .input:focus {
   outline: none;
   border-color: var(--color-primary);

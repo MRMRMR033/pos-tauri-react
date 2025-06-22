@@ -3,7 +3,18 @@
     "allow": [
       "Bash(git add:*)",
       "Bash(npm run build:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(find:*)",
+      "Bash(cat:*)",
+      "Bash(lsof:*)",
+      "Bash(grep:*)",
+      "Bash(for:*)",
+      "Bash(do echo \"=== $file ===\")",
+      "Bash(done)",
+      "Bash(rg:*)",
+      "Bash(curl:*)",
+      "Bash(npx tsc:*)",
+      "Bash(timeout 10s npm run dev:*)"
     ],
     "deny": []
   }

@@ -25,6 +25,8 @@ export const usePermissions = () => {
   } = context;
 
   return {
+    // Usuario actual
+    user,
     // Lista completa de permisos del usuario
     permissions,
     // Token de acceso

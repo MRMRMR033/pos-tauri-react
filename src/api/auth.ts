@@ -1,161 +1,274 @@
-// src/api/auth.ts - VERSIÓN FINAL CON ENDPOINTS REALES
-// 🚀 Integración completa con backend de permisos
+// src/api/auth.ts - API de autenticación actualizada con ApiResponse<T>
 import { fetch } from '@tauri-apps/plugin-http';
-import type { Credentials } from '../types/auth';
+import { apiClient } from './client';
+import { 
+  LoginRequest, 
+  LoginResponse, 
+  RefreshTokenRequest,
+  RefreshTokenResponse,
+  LogoutRequest,
+  Usuario, 
+  Permission, 
+  UserPermission,
+  CreateUsuarioRequest,
+  UpdateUsuarioRequest,
+  GrantPermissionRequest,
+  RevokePermissionRequest,
+  ApiResponse 
+} from '../types/api';
 
-const API_URL = 'http://localhost:3000';
+// ============ AUTENTICACIÓN ============
 
-export async function login(credentials: Credentials): Promise<{ access_token: string }> {
+export async function login(credentials: LoginRequest): Promise<ApiResponse<LoginResponse>> {
+  // Login devuelve { access_token, refresh_token, expires_in }
+  
+  console.log(`🔐 Attempting login for: ${credentials.email}`);
+  
   try {
-    const res = await fetch(`${API_URL}/auth/login`, {
+    const url = new URL('/auth/login', 'http://localhost:3000');
+    console.log(`🌐 Login URL: ${url.toString()}`);
+
+    const response = await fetch(url.toString(), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(credentials),
-    });
-    
-    if (!res.ok) {
-      const errorData = await res.text();
-      console.error('Error del servidor:', errorData);
-      throw new Error(`Error ${res.status}: Credenciales inválidas`);
-    }
-    
-    const data = await res.json();
-    return data as { access_token: string };
-  } catch (error) {
-    console.error('Error en login:', error);
-    throw error;
-  }
-}
-
-export async function getProfile(token: string): Promise<any> {
-  try {
-    const res = await fetch(`${API_URL}/auth/perfil`, {
-      method: 'GET',
-      headers: { 
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-    });
-    
-    if (!res.ok) {
-      const errorData = await res.text();
-      console.error('Error del servidor en perfil:', errorData);
-      throw new Error(`Error ${res.status}: No autorizado`);
-    }
-    
-    return await res.json();
-  } catch (error) {
-    console.error('Error en getProfile:', error);
-    throw error;
-  }
-}
-
-// Interfaces para los endpoints reales del backend
-interface PermissionResponse {
-  id: number;
-  key: string;
-  name: string;
-  description: string;
-  module: string;
-}
-
-interface SafeApiCallOptions extends RequestInit {
-  headers?: Record<string, string>;
-}
-
-// Función utilitaria para llamadas seguras a la API
-const safeApiCall = async (url: string, token: string, options: SafeApiCallOptions = {}): Promise<any> => {
-  try {
-    const response = await fetch(url, {
-      ...options,
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-        ...options.headers
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(credentials),
+    });
+
+    console.log(`✅ Login response status: ${response.status}`);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ Login failed: ${response.status} - ${errorText}`);
+      throw new Error(`Login failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log(`📦 Login data received:`, {
+      access_token: data.access_token ? '[TOKEN_RECEIVED]' : 'null',
+      refresh_token: data.refresh_token ? '[REFRESH_TOKEN_RECEIVED]' : 'null',
+      expires_in: data.expires_in
+    });
+
+    // Configurar el token en el cliente para peticiones futuras
+    if (data.access_token) {
+      apiClient.setAccessToken(data.access_token);
+    }
+
+    // Envolver la respuesta en el formato ApiResponse<T> esperado
+    const wrappedResponse: ApiResponse<LoginResponse> = {
+      data: data as LoginResponse,
+      meta: {
+        timestamp: new Date().toISOString(),
+        apiVersion: '1',
+        requestId: response.headers.get('x-request-id') || undefined
       }
+    };
+
+    return wrappedResponse;
+  } catch (error) {
+    console.error(`❌ Login error:`, error);
+    throw error;
+  }
+}
+
+export async function getProfile(): Promise<ApiResponse<Usuario>> {
+  return apiClient.get<Usuario>('/auth/perfil');
+}
+
+export async function refreshToken(refreshToken: string): Promise<ApiResponse<RefreshTokenResponse>> {
+  console.log('🔄 Attempting to refresh token');
+  
+  try {
+    const url = new URL('/auth/refresh', 'http://localhost:3000');
+    
+    const response = await fetch(url.toString(), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({ refresh_token: refreshToken }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`API Error ${response.status}: ${response.statusText} - ${errorText}`);
+      console.error(`❌ Token refresh failed: ${response.status} - ${errorText}`);
+      throw new Error(`Token refresh failed: ${response.status}`);
     }
 
-    return await response.json();
-  } catch (error) {
-    console.error(`❌ Error calling ${url}:`, error);
-    throw error;
-  }
-};
+    const data = await response.json();
+    console.log('✅ Token refreshed successfully');
 
-// Obtener permisos específicos de un usuario (usa estructura real del backend)
-export async function getUserPermissions(userId: number, token: string): Promise<string[]> {
-  try {
-    
-    const permissions: PermissionResponse[] = await safeApiCall(
-      `${API_URL}/auth/permissions/user/${userId}`,
-      token
-    );
-    
-    // Extraer solo las keys de los permisos (productos:ver, ventas:crear, etc.)
-    const permissionKeys = permissions.map(p => p.key);
-    
-    return permissionKeys;
-  } catch (error) {
-    console.error('❌ Error en getUserPermissions:', error);
-    throw error;
-  }
-}
+    // Configurar el nuevo token en el cliente
+    if (data.access_token) {
+      apiClient.setAccessToken(data.access_token);
+    }
 
-// Obtener todos los permisos del sistema (usa estructura real del backend)
-export async function getAllPermissions(token: string): Promise<PermissionResponse[]> {
-  try {
-    
-    const permissions: PermissionResponse[] = await safeApiCall(
-      `${API_URL}/auth/permissions/all`,
-      token
-    );
-    
-    return permissions;
-  } catch (error) {
-    console.error('❌ Error en getAllPermissions:', error);
-    throw error;
-  }
-}
-
-// Otorgar permiso a usuario (usa estructura real del backend)
-export async function grantPermission(userId: number, permissionKey: string, token: string): Promise<void> {
-  try {
-    
-    await safeApiCall(
-      `${API_URL}/auth/permissions/grant`,
-      token,
-      {
-        method: 'POST',
-        body: JSON.stringify({ userId, permissionKey })
+    // Envolver la respuesta en el formato ApiResponse<T>
+    const wrappedResponse: ApiResponse<RefreshTokenResponse> = {
+      data: data as RefreshTokenResponse,
+      meta: {
+        timestamp: new Date().toISOString(),
+        apiVersion: '1',
+        requestId: response.headers.get('x-request-id') || undefined
       }
-    );
-    
+    };
+
+    return wrappedResponse;
   } catch (error) {
-    console.error('❌ Error en grantPermission:', error);
+    console.error(`❌ Token refresh error:`, error);
     throw error;
   }
 }
 
-// Revocar permiso de usuario (usa estructura real del backend)
-export async function revokePermission(userId: number, permissionKey: string, token: string): Promise<void> {
+export async function logout(refreshToken?: string): Promise<ApiResponse<void>> {
+  console.log('🚪 Attempting logout');
+  
   try {
-    
-    await safeApiCall(
-      `${API_URL}/auth/permissions/revoke`,
-      token,
-      {
+    if (refreshToken) {
+      // Use refresh token to logout properly
+      const url = new URL('/auth/logout', 'http://localhost:3000');
+      
+      const response = await fetch(url.toString(), {
         method: 'POST',
-        body: JSON.stringify({ userId, permissionKey })
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+
+      if (!response.ok) {
+        console.warn('⚠️ Logout request failed, cleaning local state anyway');
       }
-    );
-    
+    }
   } catch (error) {
-    console.error('❌ Error en revokePermission:', error);
-    throw error;
+    console.warn('⚠️ Logout request error, cleaning local state anyway:', error);
   }
+  
+  // Always clean token from client
+  apiClient.setAccessToken(null);
+  console.log('✅ Logout completed');
+  
+  return {
+    data: undefined as any,
+    meta: {
+      timestamp: new Date().toISOString(),
+      apiVersion: '1'
+    }
+  };
 }
+
+export async function logoutAllSessions(): Promise<ApiResponse<void>> {
+  const response = await apiClient.post<void>('/auth/logout-all');
+  
+  // Limpiar token del cliente
+  apiClient.setAccessToken(null);
+  
+  return response;
+}
+
+// ============ PERMISOS ============
+
+export async function getUserPermissions(userId?: number): Promise<ApiResponse<Permission[]>> {
+  const endpoint = userId ? `/auth/permissions/user/${userId}` : '/auth/permissions';
+  return apiClient.get<Permission[]>(endpoint);
+}
+
+export async function getAllPermissions(): Promise<ApiResponse<Permission[]>> {
+  return apiClient.get<Permission[]>('/auth/permissions/all');
+}
+
+export async function grantPermission(data: GrantPermissionRequest): Promise<ApiResponse<UserPermission>> {
+  return apiClient.post<UserPermission>('/auth/permissions/grant', data);
+}
+
+export async function revokePermission(data: RevokePermissionRequest): Promise<ApiResponse<void>> {
+  return apiClient.post<void>('/auth/permissions/revoke', data);
+}
+
+// ============ GESTIÓN DE USUARIOS ============
+
+export async function getUsuarios(params?: { 
+  page?: number; 
+  limit?: number; 
+  search?: string; 
+}): Promise<ApiResponse<Usuario[]>> {
+  return apiClient.get<Usuario[]>('/usuario', params);
+}
+
+export async function getUsuarioById(id: number): Promise<ApiResponse<Usuario>> {
+  return apiClient.get<Usuario>(`/usuario/${id}`);
+}
+
+export async function createUsuario(data: CreateUsuarioRequest): Promise<ApiResponse<Usuario>> {
+  return apiClient.post<Usuario>('/usuario', data);
+}
+
+export async function updateUsuario(id: number, data: UpdateUsuarioRequest): Promise<ApiResponse<Usuario>> {
+  return apiClient.patch<Usuario>(`/usuario/${id}`, data);
+}
+
+export async function deleteUsuario(id: number): Promise<ApiResponse<void>> {
+  return apiClient.delete<void>(`/usuario/${id}`);
+}
+
+// Obtener permisos de un usuario específico
+export async function getUsuarioPermissions(userId: number): Promise<ApiResponse<UserPermission[]>> {
+  return apiClient.get<UserPermission[]>(`/usuario/${userId}/permissions`);
+}
+
+// Actualizar permisos masivamente para un usuario
+export async function updateUsuarioPermissions(
+  userId: number, 
+  permissions: string[]
+): Promise<ApiResponse<UserPermission[]>> {
+  return apiClient.post<UserPermission[]>(`/usuario/${userId}/permissions`, {
+    permissions
+  });
+}
+
+// ============ FUNCIONES UTILITARIAS ============
+
+// Verificar si un usuario tiene un permiso específico
+export function hasPermission(userPermissions: string[], permission: string): boolean {
+  return userPermissions.includes(permission);
+}
+
+// Verificar si un usuario tiene alguno de los permisos especificados
+export function hasAnyPermission(userPermissions: string[], permissions: string[]): boolean {
+  return permissions.some(permission => userPermissions.includes(permission));
+}
+
+// Verificar si un usuario tiene todos los permisos especificados
+export function hasAllPermissions(userPermissions: string[], permissions: string[]): boolean {
+  return permissions.every(permission => userPermissions.includes(permission));
+}
+
+// Verificar si un usuario es admin
+export function isAdmin(user: Usuario | null): boolean {
+  return user?.rol === 'admin';
+}
+
+// Agrupar permisos por módulo
+export function groupPermissionsByModule(permissions: Permission[]): Record<string, Permission[]> {
+  return permissions.reduce((acc, permission) => {
+    if (!acc[permission.module]) {
+      acc[permission.module] = [];
+    }
+    acc[permission.module].push(permission);
+    return acc;
+  }, {} as Record<string, Permission[]>);
+}
+
+// Configurar token de acceso (para uso con localStorage/sessionStorage)
+export function setAccessToken(token: string | null): void {
+  apiClient.setAccessToken(token);
+}
+
+// Legacy exports para compatibilidad
+export { hasPermission as checkPermission };
+export type AuthResponse = LoginResponse;

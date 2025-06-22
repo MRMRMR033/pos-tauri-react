@@ -220,6 +220,7 @@
   background: #fafafa;
   font-family: inherit;
   box-sizing: border-box;
+  color: #1a202c;
 }
 
 .form-input:focus {
@@ -227,6 +228,7 @@
   border-color: #667eea;
   background: white;
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  color: #1a202c;
 }
 
 .form-input:focus + .input-icon,
@@ -237,6 +239,7 @@
 .form-input:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  color: #1a202c;
 }
 
 .form-input::placeholder {

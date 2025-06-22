@@ -67,6 +67,12 @@ const DashboardLayout: React.FC<Props> = ({ children }) => {
             <NavLink to="proveedores" className="dl-nav__link">Proveedores</NavLink>
           </ProtectedComponent>
           
+          {/* Caja - Solo si puede operar caja */}
+          <ProtectedComponent permission={ALL_PERMISSIONS.CAJA_ABRIR}>
+            <NavLink to="caja" className="dl-nav__link">💰 Caja</NavLink>
+          </ProtectedComponent>
+          
+          
           {/* Sección administrativa - Solo para admins */}
           {isAdmin() && (
             <>

@@ -5,35 +5,34 @@ const API_URL = 'http://localhost:3000';
 
 export interface Usuario {
   id: number;
-  email: string;
+  email: string | null;
   fullName: string;
-  rol: string; // ADMIN o EMPLEADO
-  activo?: boolean;
-  createdAt?: string;
-  updatedAt?: string;
+  rol: 'admin' | 'empleado'; // Minúsculas como en el backend
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CreateUsuarioRequest {
-  email: string;
+  email?: string; // Opcional en el backend
   password: string;
   fullName: string;
-  rol?: string; // ADMIN o EMPLEADO, por defecto EMPLEADO
-  activo?: boolean;
+  rol: 'admin' | 'empleado'; // Requerido, minúsculas
 }
 
 export interface UpdateUsuarioRequest {
   email?: string;
   password?: string;
   fullName?: string;
-  rol?: string;
-  activo?: boolean;
+  rol?: 'admin' | 'empleado';
 }
 
 function getAuthHeaders(token?: string): HeadersInit {
-  const authToken = token || localStorage.getItem('token');
+  if (!token) {
+    throw new Error('Token de autenticación requerido');
+  }
   return {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${authToken}`,
+    'Authorization': `Bearer ${token}`,
   };
 }
 

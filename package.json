@@ -8,6 +8,10 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
@@ -15,7 +19,10 @@
     "db:reset": "prisma db push --force-reset && npm run db:seed"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.1.1",
     "@prisma/client": "^5.7.1",
+    "@tanstack/react-query": "^5.80.10",
+    "@tanstack/react-query-devtools": "^5.80.10",
     "@tauri-apps/api": "^2.5.0",
     "@tauri-apps/plugin-dialog": "^2.2.2",
     "@tauri-apps/plugin-fs": "^2.3.0",
@@ -27,23 +34,34 @@
     "@tauri-apps/plugin-updater": "^2.7.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.30.1"
+    "react-dropzone": "^14.3.8",
+    "react-hook-form": "^7.58.1",
+    "react-router-dom": "^6.30.1",
+    "xlsx": "^0.18.5",
+    "zod": "^3.25.67"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
     "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^24.0.3",
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.1",
     "@types/react-router-dom": "^5.3.3",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.21",
     "bcryptjs": "^2.4.3",
+    "jsdom": "^26.1.0",
+    "msw": "^2.10.2",
     "postcss": "^8.5.5",
     "prisma": "^5.7.1",
     "tailwindcss": "^4.1.10",
     "tsx": "^4.7.0",
     "typescript": "~5.6.2",
-    "vite": "^6.0.3"
+    "vite": "^6.0.3",
+    "vitest": "^3.2.4"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

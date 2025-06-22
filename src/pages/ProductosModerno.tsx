@@ -8,13 +8,13 @@ import {
   createProducto, 
   updateProducto, 
   deleteProducto,
-  getCategorias, 
-  getProveedores,
   type Producto, 
   type ProductSearchParams,
   type ProductListResponse,
   type CreateProductoRequest 
 } from '../api/products';
+import { getCategorias, type Categoria } from '../api/categories';
+import { getProveedores, type Proveedor } from '../api/suppliers';
 import { ProtectedComponent } from '../components/auth/ProtectedComponent';
 import { ALL_PERMISSIONS } from '../types/permissions';
 import ProductForm from '../components/products/ProductForm';
@@ -23,13 +23,13 @@ import SearchBar from '../components/products/SearchBar';
 import './ProductosModerno.css';
 
 const ProductosModerno: React.FC = () => {
-  const { hasPermission, accessToken } = usePermissions();
+  const { hasPermission } = usePermissions();
   const { showSuccess, showError } = useToast();
 
   // Estados principales
   const [productos, setProductos] = useState<Producto[]>([]);
-  const [categorias, setCategorias] = useState<any[]>([]);
-  const [proveedores, setProveedores] = useState<any[]>([]);
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [proveedores, setProveedores] = useState<Proveedor[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalProducts, setTotalProducts] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -60,12 +60,12 @@ const ProductosModerno: React.FC = () => {
 
   const loadInitialData = async () => {
     try {
-      const [categoriasData, proveedoresData] = await Promise.all([
-        getCategorias(accessToken || undefined),
-        getProveedores(accessToken || undefined)
+      const [categoriasResponse, proveedoresResponse] = await Promise.all([
+        getCategorias(),
+        getProveedores()
       ]);
-      setCategorias(categoriasData);
-      setProveedores(proveedoresData);
+      setCategorias(categoriasResponse.data);
+      setProveedores(proveedoresResponse.data);
     } catch (error) {
       showError('Error al cargar datos iniciales');
       console.error('Error loading initial data:', error);
@@ -87,11 +87,11 @@ const ProductosModerno: React.FC = () => {
         sortOrder
       };
 
-      const response: ProductListResponse = await getProductos(params, accessToken || undefined);
+      const response: ProductListResponse = await getProductos(params);
       
-      setProductos(response.productos || []);
-      setTotalProducts(response.total || 0);
-      setTotalPages(response.totalPages || 1);
+      setProductos(response.data || []);
+      setTotalProducts(response.meta?.total || 0);
+      setTotalPages(response.meta?.totalPages || 1);
     } catch (error: any) {
       if (error.message?.includes('403')) {
         showError('Sin permisos para ver productos');
@@ -159,7 +159,7 @@ const ProductosModerno: React.FC = () => {
 
     try {
       setLoading(true);
-      await deleteProducto(id, accessToken || undefined);
+      await deleteProducto(id);
       showSuccess('Producto eliminado exitosamente');
       await loadProductos();
     } catch (error: any) {
@@ -178,10 +178,10 @@ const ProductosModerno: React.FC = () => {
       setLoading(true);
       
       if (editingProduct) {
-        await updateProducto(editingProduct.id, productData, accessToken || undefined);
+        await updateProducto(editingProduct.id, productData);
         showSuccess('Producto actualizado exitosamente');
       } else {
-        await createProducto(productData, accessToken || undefined);
+        await createProducto(productData);
         showSuccess('Producto creado exitosamente');
       }
       

@@ -26,8 +26,8 @@ const Proveedores: React.FC = () => {
 
   const loadProveedores = async () => {
     try {
-      const data = await getProveedores(accessToken || undefined);
-      setProveedores(data);
+      const response = await getProveedores();
+      setProveedores(response.data);
     } catch (err: any) {
       setError('Error al cargar proveedores');
       console.error('Error loading proveedores:', err);
@@ -60,11 +60,11 @@ const Proveedores: React.FC = () => {
       };
 
       if (editingId) {
-        await updateProveedor(editingId, formData, accessToken || undefined);
+        await updateProveedor(editingId, formData);
         setSuccess('Proveedor actualizado exitosamente');
         setEditingId(null);
       } else {
-        await createProveedor(formData, accessToken || undefined);
+        await createProveedor(formData);
         setSuccess('Proveedor creado exitosamente');
       }
       
@@ -103,7 +103,7 @@ const Proveedores: React.FC = () => {
     }
 
     try {
-      await deleteProveedor(id, accessToken || undefined);
+      await deleteProveedor(id);
       setSuccess('Proveedor eliminado exitosamente');
       await loadProveedores();
     } catch (err: any) {

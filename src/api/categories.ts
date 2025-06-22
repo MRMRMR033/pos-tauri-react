@@ -1,121 +1,33 @@
-// src/api/categories.ts - API completa para categorías con NestJS
-import { fetch } from '@tauri-apps/plugin-http';
+// src/api/categories.ts - API actualizada con apiClient y ApiResponse<T>
+import { apiClient } from './client';
+import { Categoria, CreateCategoriaRequest, ApiResponse, PaginationParams } from '../types/api';
 
-const API_URL = 'http://localhost:3000';
+// Re-export tipos para compatibilidad
+export type { Categoria, CreateCategoriaRequest };
 
-export interface Categoria {
-  id: number;
-  nombre: string;
-  descripcion?: string;
-  activa?: boolean;
-  createdAt?: string;
-  updatedAt?: string;
+// Parámetros de búsqueda para categorías
+export interface CategorySearchParams extends PaginationParams {
+  search?: string;
 }
 
-export interface CreateCategoriaRequest {
-  nombre: string;
-  descripcion?: string;
-  activa?: boolean;
+// ============ CATEGORÍAS ============
+
+export async function getCategorias(params?: CategorySearchParams): Promise<ApiResponse<Categoria[]>> {
+  return apiClient.get<Categoria[]>('/categoria', params);
 }
 
-function getAuthHeaders(token?: string): HeadersInit {
-  const authToken = token || localStorage.getItem('token');
-  return {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${authToken}`,
-  };
+export async function getCategoriaById(id: number): Promise<ApiResponse<Categoria>> {
+  return apiClient.get<Categoria>(`/categoria/${id}`);
 }
 
-export async function getCategorias(token?: string): Promise<Categoria[]> {
-  try {
-    const res = await fetch(`${API_URL}/categoria`, {
-      method: 'GET',
-      headers: getAuthHeaders(token),
-    });
-    
-    if (!res.ok) {
-      throw new Error(`Error ${res.status}: No se pudieron obtener las categorías`);
-    }
-    
-    return await res.json();
-  } catch (error) {
-    console.error('Error en getCategorias:', error);
-    throw error;
-  }
+export async function createCategoria(data: CreateCategoriaRequest): Promise<ApiResponse<Categoria>> {
+  return apiClient.post<Categoria>('/categoria', data);
 }
 
-export async function getCategoriaById(id: number, token?: string): Promise<Categoria> {
-  try {
-    const res = await fetch(`${API_URL}/categoria/${id}`, {
-      method: 'GET',
-      headers: getAuthHeaders(token),
-    });
-    
-    if (!res.ok) {
-      throw new Error(`Error ${res.status}: No se pudo obtener la categoría`);
-    }
-    
-    return await res.json();
-  } catch (error) {
-    console.error('Error en getCategoriaById:', error);
-    throw error;
-  }
+export async function updateCategoria(id: number, data: Partial<CreateCategoriaRequest>): Promise<ApiResponse<Categoria>> {
+  return apiClient.patch<Categoria>(`/categoria/${id}`, data);
 }
 
-export async function createCategoria(data: CreateCategoriaRequest, token?: string): Promise<Categoria> {
-  try {
-    const res = await fetch(`${API_URL}/categoria`, {
-      method: 'POST',
-      headers: getAuthHeaders(token),
-      body: JSON.stringify(data),
-    });
-    
-    if (!res.ok) {
-      const errorData = await res.text();
-      console.error('Error del servidor:', errorData);
-      throw new Error(`Error ${res.status}: No se pudo crear la categoría`);
-    }
-    
-    return await res.json();
-  } catch (error) {
-    console.error('Error en createCategoria:', error);
-    throw error;
-  }
-}
-
-export async function updateCategoria(id: number, data: Partial<CreateCategoriaRequest>, token?: string): Promise<Categoria> {
-  try {
-    const res = await fetch(`${API_URL}/categoria/${id}`, {
-      method: 'PATCH',
-      headers: getAuthHeaders(token),
-      body: JSON.stringify(data),
-    });
-    
-    if (!res.ok) {
-      const errorData = await res.text();
-      console.error('Error del servidor:', errorData);
-      throw new Error(`Error ${res.status}: No se pudo actualizar la categoría`);
-    }
-    
-    return await res.json();
-  } catch (error) {
-    console.error('Error en updateCategoria:', error);
-    throw error;
-  }
-}
-
-export async function deleteCategoria(id: number, token?: string): Promise<void> {
-  try {
-    const res = await fetch(`${API_URL}/categoria/${id}`, {
-      method: 'DELETE',
-      headers: getAuthHeaders(token),
-    });
-    
-    if (!res.ok) {
-      throw new Error(`Error ${res.status}: No se pudo eliminar la categoría`);
-    }
-  } catch (error) {
-    console.error('Error en deleteCategoria:', error);
-    throw error;
-  }
+export async function deleteCategoria(id: number): Promise<ApiResponse<void>> {
+  return apiClient.delete<void>(`/categoria/${id}`);
 }

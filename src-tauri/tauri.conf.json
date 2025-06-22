@@ -13,9 +13,19 @@
     "windows": [
       {
         "label": "main",
-        "title": "my-pos-desktop",
-        "width": 800,
-        "height": 600
+        "title": "Sistema POS - Punto de Venta",
+        "fullscreen": true,
+        "resizable": false,
+        "minimizable": false,
+        "maximizable": false,
+        "closable": true,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": false,
+        "width": 1920,
+        "height": 1080,
+        "minWidth": 1024,
+        "minHeight": 768
       }
     ],
     "security": {

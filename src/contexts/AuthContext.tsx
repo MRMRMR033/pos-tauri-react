@@ -1,26 +1,31 @@
 // src/contexts/AuthContext.tsx - VERSIÓN FINAL CON ENDPOINTS REALES
 // 🚀 Sistema de permisos completamente integrado con backend
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
-import { login, getProfile, getUserPermissions, getAllPermissions } from '../api/auth';
+import { login, getProfile, getUserPermissions, getAllPermissions, refreshToken as refreshTokenAPI, logout } from '../api/auth';
+import { apiClient } from '../api/client';
 import { Store } from '@tauri-apps/plugin-store';
 import { ALL_PERMISSIONS } from '../types/permissions';
+import { API_CONFIG } from '../config/api';
 
 interface User {
   id: number;
-  email: string;
+  email: string | null;
   fullName: string;
   rol: string;
 }
 
 interface AuthData {
   accessToken: string;
+  refreshToken: string;
   user: User;
   permissions: string[];
+  expiresAt: number; // timestamp when access token expires
 }
 
 interface AuthContextType {
   user: User | null;
   accessToken: string | null;
+  refreshToken: string | null;
   permissions: string[];
   isLoadingAuth: boolean;
   signIn: (creds: { email: string; password: string }) => Promise<void>;
@@ -35,6 +40,7 @@ interface AuthContextType {
 export const AuthContext = createContext<AuthContextType>({
   user: null,
   accessToken: null,
+  refreshToken: null,
   permissions: [],
   isLoadingAuth: true,
   signIn: async () => {},
@@ -49,6 +55,7 @@ export const AuthContext = createContext<AuthContextType>({
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [permissions, setPermissions] = useState<string[]>([]);
   const [isLoadingAuth, setIsLoadingAuth] = useState<boolean>(true);
   const [authStore, setAuthStore] = useState<Store | null>(null);
@@ -62,8 +69,60 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setAuthStore(storeInstance);
 
         const saved = await storeInstance.get<AuthData>('auth');
-        if (saved && saved.accessToken) {
-          setAccessToken(saved.accessToken);
+        if (saved && saved.accessToken && saved.refreshToken) {
+          // Check if access token is expired
+          const isExpired = saved.expiresAt && Date.now() > saved.expiresAt;
+          
+          if (isExpired) {
+            console.log('🔄 Access token expired, attempting refresh');
+            try {
+              const response = await refreshTokenAPI(saved.refreshToken);
+              const { access_token, refresh_token: new_refresh_token, expires_in } = response.data;
+              
+              setAccessToken(access_token);
+              setRefreshToken(new_refresh_token);
+              apiClient.setAccessToken(access_token);
+              
+              const expiresAt = Date.now() + (expires_in * 1000);
+              
+              // Update stored auth data
+              const updatedAuth = {
+                ...saved,
+                accessToken: access_token,
+                refreshToken: new_refresh_token,
+                expiresAt
+              };
+              
+              await storeInstance.set('auth', updatedAuth);
+              await storeInstance.save();
+              
+              // Schedule next refresh
+              scheduleTokenRefresh(expires_in);
+              
+            } catch (refreshError) {
+              console.error('❌ Failed to refresh token on startup:', refreshError);
+              // Clear invalid session
+              await storeInstance.delete('auth');
+              await storeInstance.save();
+              setIsLoadingAuth(false);
+              return;
+            }
+          } else {
+            // Token is still valid
+            setAccessToken(saved.accessToken);
+            setRefreshToken(saved.refreshToken);
+            apiClient.setAccessToken(saved.accessToken);
+            
+            // Schedule refresh based on remaining time
+            const remainingTime = Math.max(0, (saved.expiresAt - Date.now()) / 1000);
+            if (remainingTime > 120) { // More than 2 minutes left
+              scheduleTokenRefresh(remainingTime);
+            } else {
+              // Less than 2 minutes, refresh immediately
+              attemptTokenRefresh();
+            }
+          }
+          
           if (saved.user) {
             setUser(saved.user);
             
@@ -76,8 +135,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               try {
                 if (saved.user.rol === 'ADMIN' || saved.user.rol === 'admin') {
                   // Para admins, obtener todos los permisos
-                  const allPermissions = await getAllPermissions(saved.accessToken);
-                  const adminPermissions = allPermissions.map(p => p.key);
+                  const allPermissions = await getAllPermissions();
+                  const adminPermissions = allPermissions.data.map(p => p.key);
                   setPermissions(adminPermissions);
                   
                   // Actualizar store
@@ -88,8 +147,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                   await storeInstance.save();
                 } else {
                   // Para empleados, obtener permisos específicos
-                  const userPerms = await getUserPermissions(saved.user.id, saved.accessToken);
-                  setPermissions(userPerms);
+                  const userPerms = await getUserPermissions(saved.user.id);
+                  setPermissions(userPerms.data.map(p => p.key));
                   
                   // Actualizar store
                   await storeInstance.set('auth', {
@@ -105,6 +164,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 await storeInstance.save();
                 setUser(null);
                 setAccessToken(null);
+                apiClient.setAccessToken(null);
                 setPermissions([]);
               }
             }
@@ -121,31 +181,37 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const signIn = async ({ email, password }: { email: string; password: string }) => {
     try {
       
-      // 1. Llamar login para obtener token
-      const { access_token } = await login({ email, password });
+      // 1. Llamar login para obtener tokens
+      const response = await login({ email, password });
+      const { access_token, refresh_token, expires_in } = response.data;
       
-      if (!access_token) {
-        throw new Error('No se recibió token de acceso');
+      if (!access_token || !refresh_token) {
+        throw new Error('No se recibieron tokens de acceso');
       }
       
-      setAccessToken(access_token);
-
-      // 2. Llamar perfil para obtener datos de usuario
-      const perfil = await getProfile(access_token);
+      // Calcular timestamp de expiración
+      const expiresAt = Date.now() + (expires_in * 1000);
       
-      setUser(perfil);
+      setAccessToken(access_token);
+      setRefreshToken(refresh_token);
+      apiClient.setAccessToken(access_token);
+      
+      // 2. Obtener el perfil del usuario con el token
+      const usuario = await getProfile();
+      console.log('👤 Usuario obtenido:', usuario.data);
+      setUser(usuario.data);
 
       // 3. Obtener permisos del usuario desde backend real
       let userPermissions: string[] = [];
       
       try {
-        if (perfil.rol === 'ADMIN' || perfil.rol === 'admin') {
+        if (usuario.data.rol === 'admin') {
           // Los admins tienen todos los permisos automáticamente
           
           try {
             // Intentar obtener todos los permisos del backend para estar al día
-            const allPermissionsFromBackend = await getAllPermissions(access_token);
-            userPermissions = allPermissionsFromBackend.map(p => p.key);
+            const allPermissionsFromBackend = await getAllPermissions();
+            userPermissions = allPermissionsFromBackend.data.map(p => p.key);
           } catch (adminPermError) {
             // Fallback: usar permisos definidos en frontend
             console.warn('⚠️ No se pudieron obtener permisos del backend, usando fallback de admin');
@@ -153,7 +219,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           }
         } else {
           // Empleados: obtener permisos específicos desde backend
-          userPermissions = await getUserPermissions(perfil.id, access_token);
+          const userPerms = await getUserPermissions(usuario.data.id);
+          userPermissions = userPerms.data.map(p => p.key);
           
           if (userPermissions.length === 0) {
             console.warn('⚠️ Usuario sin permisos asignados en backend');
@@ -165,7 +232,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.error('❌ Error obteniendo permisos desde backend:', permError);
         
         // En caso de error crítico, no permitir acceso
-        if (perfil.rol === 'ADMIN' || perfil.rol === 'admin') {
+        if (usuario.data.rol === 'admin') {
           // Para admins, usar permisos de fallback
             userPermissions = Object.values(ALL_PERMISSIONS);
         } else {
@@ -176,31 +243,134 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       
       setPermissions(userPermissions);
+      console.log('✅ AuthContext - Login completado exitosamente');
+      console.log('👤 Usuario final:', usuario.data);
+      console.log('🔐 Permisos final:', userPermissions);
 
       // 4. Persistir en store
       if (authStore) {
         await authStore.set('auth', { 
           accessToken: access_token, 
-          user: perfil, 
-          permissions: userPermissions 
+          refreshToken: refresh_token,
+          user: usuario.data, 
+          permissions: userPermissions,
+          expiresAt
         });
         await authStore.save();
       }
+      
+      // 5. Configurar auto-refresh
+      scheduleTokenRefresh(expires_in);
+      
     } catch (error) {
-      console.error('Error en signIn:', error);
+      console.error('Error detallado en signIn:', error);
+      
+      // Mostrar información más específica del error
+      if (error instanceof Error) {
+        console.error('Mensaje del error:', error.message);
+        console.error('Stack trace:', error.stack);
+      }
+      
+      // Si es un error de red, mostrar información específica
+      if ((error as Error).name === 'TypeError' && (error as Error).message.includes('fetch')) {
+        console.error('Error de conexión: No se puede conectar al servidor backend');
+        console.error('Verificar que el servidor está ejecutándose en:', API_CONFIG.BASE_URL);
+      }
+      
       // Limpiar estado en caso de error
       setAccessToken(null);
+      setRefreshToken(null);
+      apiClient.setAccessToken(null);
       setUser(null);
       setPermissions([]);
       throw error;
     }
   };
 
+  // Auto-refresh timer
+  const [refreshTimeoutId, setRefreshTimeoutId] = useState<NodeJS.Timeout | null>(null);
+
+  const scheduleTokenRefresh = (expiresInSeconds: number) => {
+    // Clear existing timeout
+    if (refreshTimeoutId) {
+      clearTimeout(refreshTimeoutId);
+    }
+
+    // Schedule refresh 2 minutes before expiration
+    const refreshTime = Math.max(0, (expiresInSeconds - 120) * 1000);
+    
+    console.log(`🕐 Scheduling token refresh in ${refreshTime / 1000} seconds`);
+    
+    const timeoutId = setTimeout(async () => {
+      await attemptTokenRefresh();
+    }, refreshTime);
+    
+    setRefreshTimeoutId(timeoutId);
+  };
+
+  const attemptTokenRefresh = async () => {
+    if (!refreshToken) {
+      console.log('⚠️ No refresh token available for refresh');
+      return;
+    }
+
+    try {
+      console.log('🔄 Attempting automatic token refresh');
+      const response = await refreshTokenAPI(refreshToken);
+      const { access_token, refresh_token: new_refresh_token, expires_in } = response.data;
+      
+      // Update tokens
+      setAccessToken(access_token);
+      setRefreshToken(new_refresh_token);
+      apiClient.setAccessToken(access_token);
+      
+      // Update stored auth data
+      if (authStore && user) {
+        const expiresAt = Date.now() + (expires_in * 1000);
+        await authStore.set('auth', { 
+          accessToken: access_token, 
+          refreshToken: new_refresh_token,
+          user, 
+          permissions,
+          expiresAt
+        });
+        await authStore.save();
+      }
+      
+      // Schedule next refresh
+      scheduleTokenRefresh(expires_in);
+      
+      console.log('✅ Token refreshed successfully');
+    } catch (error) {
+      console.error('❌ Token refresh failed:', error);
+      // If refresh fails, force logout
+      await signOut();
+    }
+  };
+
   const signOut = async () => {
     try {
+      // Clear refresh timeout
+      if (refreshTimeoutId) {
+        clearTimeout(refreshTimeoutId);
+        setRefreshTimeoutId(null);
+      }
+
+      // Call logout endpoint if we have a refresh token
+      if (refreshToken) {
+        try {
+          await logout(refreshToken);
+        } catch (error) {
+          console.warn('⚠️ Logout request failed, cleaning local state anyway:', error);
+        }
+      }
+
       setUser(null);
       setAccessToken(null);
+      setRefreshToken(null);
+      apiClient.setAccessToken(null);
       setPermissions([]);
+      
       if (authStore) {
         await authStore.delete('auth');
         await authStore.save();
@@ -244,11 +414,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       if (user.rol === 'ADMIN' || user.rol === 'admin') {
         // Admins: obtener todos los permisos actualizados
-        const allPermissions = await getAllPermissions(accessToken);
-        userPermissions = allPermissions.map(p => p.key);
+        const allPermissions = await getAllPermissions();
+        userPermissions = allPermissions.data.map(p => p.key);
       } else {
         // Empleados: obtener permisos específicos actualizados
-        userPermissions = await getUserPermissions(user.id, accessToken);
+        const permsResponse = await getUserPermissions(user.id);
+        userPermissions = permsResponse.data.map(p => p.key);
       }
       
       setPermissions(userPermissions);
@@ -273,6 +444,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       value={{ 
         user, 
         accessToken, 
+        refreshToken,
         permissions, 
         isLoadingAuth, 
         signIn, 

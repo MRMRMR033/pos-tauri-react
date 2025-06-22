@@ -1,0 +1,11 @@
+Nombre,Codigo,Descripcion,Precio Costo,Precio Venta,Stock,Stock Minimo,Categoria,Proveedor,Unidad
+Coca Cola 600ml,CC600,Refresco de cola 600ml,15.50,25.00,100,10,Bebidas,Coca Cola Company,pza
+Pepsi 600ml,PP600,Refresco de cola 600ml,14.50,24.00,80,10,Bebidas,PepsiCo,pza
+Agua Natural 1L,AGN1L,Agua purificada 1 litro,8.00,15.00,150,20,Bebidas,Bonafont,pza
+Sabritas Original,SAB001,Papas fritas sabor natural,12.00,20.00,50,15,Snacks,Sabritas,pza
+Doritos Nacho,DOR001,Totopos sabor nacho,15.00,25.00,40,10,Snacks,Sabritas,pza
+Pan Bimbo Blanco,PAN001,Pan de caja blanco grande,22.00,35.00,25,5,Panaderia,Grupo Bimbo,pza
+Leche Lala 1L,LEC001,Leche entera 1 litro,18.00,28.00,30,8,Lacteos,Grupo Lala,pza
+Yogurt Danone Natural,YOG001,Yogurt natural 1kg,25.00,40.00,20,5,Lacteos,Danone,pza
+Cereal Kelloggs,CER001,Cereal de maiz zucaritas,45.00,70.00,15,3,Cereales,Kelloggs,pza
+Detergente Ariel,DET001,Detergente en polvo 1kg,35.00,55.00,12,3,Limpieza,Procter & Gamble,pza

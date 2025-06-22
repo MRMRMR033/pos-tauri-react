@@ -1,5 +1,8 @@
-// src/components/products/ProductForm.tsx - Formulario de producto con validación
-import React, { useState, useEffect } from 'react';
+// src/components/products/ProductForm.tsx - Formulario con React Hook Form + Zod
+import React, { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { ProtectedComponent } from '../auth/ProtectedComponent';
 import { usePermissions } from '../../hooks/usePermissions';
 import { ALL_PERMISSIONS } from '../../types/permissions';
@@ -15,21 +18,62 @@ interface ProductFormProps {
   loading: boolean;
 }
 
-interface FormData {
-  codigoBarras: string;
-  nombre: string;
-  descripcion: string;
-  precioCosto: string;
-  precioVenta: string;
-  stock: string;
-  stockMinimo: string;
-  categoriaId: string;
-  proveedorId: string;
-}
+// Zod schema basado en el CreateProductoDto del backend
+const createProductSchema = (hasPermission: (permission: string) => boolean) => {
+  return z.object({
+    codigoBarras: z
+      .string()
+      .min(1, 'El código de barras es requerido')
+      .min(8, 'El código debe tener al menos 8 caracteres')
+      .regex(/^\d{8,}$/, 'El código debe contener solo números'),
+    
+    nombre: z
+      .string()
+      .min(1, 'El nombre es requerido')
+      .min(2, 'El nombre debe tener al menos 2 caracteres')
+      .max(255, 'El nombre no puede exceder 255 caracteres'),
+    
+    precioCosto: hasPermission(ALL_PERMISSIONS.PRODUCTOS_VER_PRECIO_COSTO) 
+      ? z.number().min(0, 'El precio de costo debe ser mayor o igual a 0')
+      : z.number().optional(),
+    
+    precioVenta: z
+      .number()
+      .min(0.01, 'El precio de venta debe ser mayor a 0'),
+    
+    precioEspecial: z
+      .number()
+      .min(0, 'El precio especial debe ser mayor o igual a 0')
+      .optional(),
+    
+    stock: hasPermission(ALL_PERMISSIONS.PRODUCTOS_VER_STOCK)
+      ? z.number().int().min(0, 'El stock debe ser mayor o igual a 0')
+      : z.number().int().optional(),
+    
+    categoriaId: z
+      .number()
+      .int()
+      .optional(), // Backend lo tiene como opcional
+    
+    proveedorId: z
+      .number()
+      .int()
+      .min(1)
+      .optional()
+  }).refine((data) => {
+    if (hasPermission(ALL_PERMISSIONS.PRODUCTOS_VER_PRECIO_COSTO) && 
+        data.precioCosto !== undefined && 
+        data.precioVenta <= data.precioCosto) {
+      return false;
+    }
+    return true;
+  }, {
+    message: 'El precio de venta debe ser mayor al precio de costo',
+    path: ['precioVenta']
+  });
+};
 
-interface FormErrors {
-  [key: string]: string;
-}
+type ProductFormData = z.infer<ReturnType<typeof createProductSchema>>;
 
 const ProductForm: React.FC<ProductFormProps> = ({
   product,
@@ -41,153 +85,57 @@ const ProductForm: React.FC<ProductFormProps> = ({
 }) => {
   const { hasPermission } = usePermissions();
   
-  const [formData, setFormData] = useState<FormData>({
-    codigoBarras: '',
-    nombre: '',
-    descripcion: '',
-    precioCosto: '',
-    precioVenta: '',
-    stock: '',
-    stockMinimo: '',
-    categoriaId: '',
-    proveedorId: ''
+  const schema = createProductSchema(hasPermission);
+  
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isValid },
+    reset
+  } = useForm<ProductFormData>({
+    resolver: zodResolver(schema),
+    mode: 'onBlur',
+    defaultValues: {
+      codigoBarras: '',
+      nombre: '',
+      precioCosto: 0,
+      precioVenta: 0,
+      stock: 0,
+      categoriaId: undefined,
+      proveedorId: undefined
+    }
   });
-
-  const [errors, setErrors] = useState<FormErrors>({});
-  const [touched, setTouched] = useState<{[key: string]: boolean}>({});
 
   // Llenar formulario si estamos editando
   useEffect(() => {
     if (product) {
-      setFormData({
+      reset({
         codigoBarras: product.codigoBarras || '',
         nombre: product.nombre,
-        descripcion: product.descripcion || '',
-        precioCosto: product.precioCosto.toString(),
-        precioVenta: product.precioVenta.toString(),
-        stock: product.stock.toString(),
-        stockMinimo: product.stockMinimo?.toString() || '',
-        categoriaId: product.categoriaId?.toString() || '',
-        proveedorId: product.proveedorId?.toString() || ''
+        precioCosto: product.precioCosto,
+        precioVenta: product.precioVenta,
+        precioEspecial: product.precioEspecial,
+        stock: product.stock,
+        categoriaId: product.categoriaId,
+        proveedorId: product.proveedorId || undefined
       });
     }
-  }, [product]);
+  }, [product, reset]);
 
-  // Validaciones en tiempo real
-  const validateField = (name: string, value: string): string => {
-    switch (name) {
-      case 'nombre':
-        if (!value.trim()) return 'El nombre es requerido';
-        if (value.length < 2) return 'El nombre debe tener al menos 2 caracteres';
-        return '';
-      
-      case 'precioCosto':
-        if (hasPermission(ALL_PERMISSIONS.PRODUCTOS_VER_PRECIO_COSTO)) {
-          if (!value) return 'El precio de costo es requerido';
-          const precio = parseFloat(value);
-          if (isNaN(precio) || precio < 0) return 'Ingrese un precio válido';
-        }
-        return '';
-      
-      case 'precioVenta':
-        if (!value) return 'El precio de venta es requerido';
-        const precio = parseFloat(value);
-        if (isNaN(precio) || precio <= 0) return 'Ingrese un precio válido mayor a 0';
-        
-        // Validar que precio de venta sea mayor al de costo
-        const precioCosto = parseFloat(formData.precioCosto);
-        if (hasPermission(ALL_PERMISSIONS.PRODUCTOS_VER_PRECIO_COSTO) && 
-            !isNaN(precioCosto) && precio <= precioCosto) {
-          return 'El precio de venta debe ser mayor al precio de costo';
-        }
-        return '';
-      
-      case 'stock':
-        if (hasPermission(ALL_PERMISSIONS.PRODUCTOS_VER_STOCK)) {
-          if (!value) return 'El stock es requerido';
-          const stock = parseInt(value);
-          if (isNaN(stock) || stock < 0) return 'Ingrese un stock válido';
-        }
-        return '';
-      
-      case 'stockMinimo':
-        if (value) {
-          const stockMin = parseInt(value);
-          if (isNaN(stockMin) || stockMin < 0) return 'Ingrese un stock mínimo válido';
-        }
-        return '';
-      
-      case 'codigoBarras':
-        if (value && value.length < 8) return 'El código debe tener al menos 8 caracteres';
-        return '';
-      
-      default:
-        return '';
-    }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    
-    setFormData(prev => ({ ...prev, [name]: value }));
-    
-    // Validar campo si ya fue tocado
-    if (touched[name]) {
-      const error = validateField(name, value);
-      setErrors(prev => ({ ...prev, [name]: error }));
-    }
-  };
-
-  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    
-    setTouched(prev => ({ ...prev, [name]: true }));
-    
-    const error = validateField(name, value);
-    setErrors(prev => ({ ...prev, [name]: error }));
-  };
-
-  const validateForm = (): boolean => {
-    const newErrors: FormErrors = {};
-    
-    Object.keys(formData).forEach(key => {
-      const error = validateField(key, formData[key as keyof FormData]);
-      if (error) newErrors[key] = error;
-    });
-    
-    setErrors(newErrors);
-    setTouched(Object.keys(formData).reduce((acc, key) => ({ ...acc, [key]: true }), {}));
-    
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
-
+  const onSubmit = (data: ProductFormData) => {
     const productData: CreateProductoRequest = {
-      codigoBarras: formData.codigoBarras || undefined,
-      nombre: formData.nombre,
-      descripcion: formData.descripcion || undefined,
-      precioCosto: hasPermission(ALL_PERMISSIONS.PRODUCTOS_VER_PRECIO_COSTO) 
-        ? parseFloat(formData.precioCosto) 
-        : 0,
-      precioVenta: parseFloat(formData.precioVenta),
-      stock: hasPermission(ALL_PERMISSIONS.PRODUCTOS_VER_STOCK) 
-        ? parseInt(formData.stock) 
-        : 0,
-      stockMinimo: formData.stockMinimo ? parseInt(formData.stockMinimo) : undefined,
-      categoriaId: formData.categoriaId ? parseInt(formData.categoriaId) : undefined,
-      proveedorId: formData.proveedorId ? parseInt(formData.proveedorId) : undefined
+      codigoBarras: data.codigoBarras,
+      nombre: data.nombre,
+      precioCosto: data.precioCosto || 0,
+      precioVenta: data.precioVenta,
+      precioEspecial: data.precioEspecial || undefined,
+      stock: data.stock || 0,
+      categoriaId: data.categoriaId || undefined,
+      proveedorId: data.proveedorId || undefined
     };
 
     onSave(productData);
   };
-
-  const hasErrors = Object.values(errors).some(error => error !== '');
 
   return (
     <div className="product-form-container">
@@ -202,23 +150,20 @@ const ProductForm: React.FC<ProductFormProps> = ({
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="product-form">
+      <form onSubmit={handleSubmit(onSubmit)} className="product-form">
         <div className="form-row">
           <div className="form-group">
-            <label htmlFor="codigoBarras">Código de Barras</label>
+            <label htmlFor="codigoBarras" className="required">Código de Barras</label>
             <input
               type="text"
               id="codigoBarras"
-              name="codigoBarras"
-              value={formData.codigoBarras}
-              onChange={handleChange}
-              onBlur={handleBlur}
+              {...register('codigoBarras')}
               placeholder="Escáner o ingreso manual"
               className={errors.codigoBarras ? 'error' : ''}
               disabled={loading}
             />
             {errors.codigoBarras && (
-              <span className="error-message">{errors.codigoBarras}</span>
+              <span className="error-message">{errors.codigoBarras.message}</span>
             )}
           </div>
 
@@ -227,33 +172,15 @@ const ProductForm: React.FC<ProductFormProps> = ({
             <input
               type="text"
               id="nombre"
-              name="nombre"
-              value={formData.nombre}
-              onChange={handleChange}
-              onBlur={handleBlur}
+              {...register('nombre')}
               placeholder="Ej: Coca Cola 350ml"
               className={errors.nombre ? 'error' : ''}
               disabled={loading}
-              required
             />
             {errors.nombre && (
-              <span className="error-message">{errors.nombre}</span>
+              <span className="error-message">{errors.nombre.message}</span>
             )}
           </div>
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="descripcion">Descripción</label>
-          <textarea
-            id="descripcion"
-            name="descripcion"
-            value={formData.descripcion}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            placeholder="Descripción adicional del producto"
-            rows={3}
-            disabled={loading}
-          />
         </div>
 
         <div className="form-row">
@@ -261,38 +188,45 @@ const ProductForm: React.FC<ProductFormProps> = ({
             <label htmlFor="categoriaId">Categoría</label>
             <select
               id="categoriaId"
-              name="categoriaId"
-              value={formData.categoriaId}
-              onChange={handleChange}
-              onBlur={handleBlur}
+              {...register('categoriaId', { 
+                valueAsNumber: true,
+                setValueAs: (value) => value === 0 ? undefined : value 
+              })}
               disabled={loading}
+              className={errors.categoriaId ? 'error' : ''}
             >
-              <option value="">Sin categoría</option>
+              <option value={0}>Sin categoría</option>
               {categorias.map(categoria => (
                 <option key={categoria.id} value={categoria.id}>
                   {categoria.nombre}
                 </option>
               ))}
             </select>
+            {errors.categoriaId && (
+              <span className="error-message">{errors.categoriaId.message}</span>
+            )}
           </div>
 
           <div className="form-group">
             <label htmlFor="proveedorId">Proveedor</label>
             <select
               id="proveedorId"
-              name="proveedorId"
-              value={formData.proveedorId}
-              onChange={handleChange}
-              onBlur={handleBlur}
+              {...register('proveedorId', { 
+                valueAsNumber: true,
+                setValueAs: (value) => value === 0 ? undefined : value 
+              })}
               disabled={loading}
             >
-              <option value="">Sin proveedor</option>
+              <option value={0}>Sin proveedor</option>
               {proveedores.map(proveedor => (
                 <option key={proveedor.id} value={proveedor.id}>
                   {proveedor.nombre}
                 </option>
               ))}
             </select>
+            {errors.proveedorId && (
+              <span className="error-message">{errors.proveedorId.message}</span>
+            )}
           </div>
         </div>
 
@@ -316,19 +250,15 @@ const ProductForm: React.FC<ProductFormProps> = ({
               <input
                 type="number"
                 id="precioCosto"
-                name="precioCosto"
-                value={formData.precioCosto}
-                onChange={handleChange}
-                onBlur={handleBlur}
+                {...register('precioCosto', { valueAsNumber: true })}
                 placeholder="0.00"
                 step="0.01"
                 min="0"
                 className={errors.precioCosto ? 'error' : ''}
                 disabled={loading}
-                required
               />
               {errors.precioCosto && (
-                <span className="error-message">{errors.precioCosto}</span>
+                <span className="error-message">{errors.precioCosto.message}</span>
               )}
             </div>
           </ProtectedComponent>
@@ -338,21 +268,37 @@ const ProductForm: React.FC<ProductFormProps> = ({
             <input
               type="number"
               id="precioVenta"
-              name="precioVenta"
-              value={formData.precioVenta}
-              onChange={handleChange}
-              onBlur={handleBlur}
+              {...register('precioVenta', { valueAsNumber: true })}
               placeholder="0.00"
               step="0.01"
               min="0.01"
               className={errors.precioVenta ? 'error' : ''}
               disabled={loading}
-              required
             />
             {errors.precioVenta && (
-              <span className="error-message">{errors.precioVenta}</span>
+              <span className="error-message">{errors.precioVenta.message}</span>
             )}
           </div>
+        </div>
+
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="precioEspecial">Precio Especial</label>
+            <input
+              type="number"
+              id="precioEspecial"
+              {...register('precioEspecial', { valueAsNumber: true })}
+              placeholder="0.00"
+              step="0.01"
+              min="0"
+              className={errors.precioEspecial ? 'error' : ''}
+              disabled={loading}
+            />
+            {errors.precioEspecial && (
+              <span className="error-message">{errors.precioEspecial.message}</span>
+            )}
+          </div>
+
         </div>
 
         <div className="form-row">
@@ -375,40 +321,17 @@ const ProductForm: React.FC<ProductFormProps> = ({
               <input
                 type="number"
                 id="stock"
-                name="stock"
-                value={formData.stock}
-                onChange={handleChange}
-                onBlur={handleBlur}
+                {...register('stock', { valueAsNumber: true })}
                 placeholder="0"
                 min="0"
                 className={errors.stock ? 'error' : ''}
                 disabled={loading}
-                required
               />
               {errors.stock && (
-                <span className="error-message">{errors.stock}</span>
+                <span className="error-message">{errors.stock.message}</span>
               )}
             </div>
           </ProtectedComponent>
-
-          <div className="form-group">
-            <label htmlFor="stockMinimo">Stock Mínimo</label>
-            <input
-              type="number"
-              id="stockMinimo"
-              name="stockMinimo"
-              value={formData.stockMinimo}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              placeholder="0"
-              min="0"
-              className={errors.stockMinimo ? 'error' : ''}
-              disabled={loading}
-            />
-            {errors.stockMinimo && (
-              <span className="error-message">{errors.stockMinimo}</span>
-            )}
-          </div>
         </div>
 
         <div className="form-actions">
@@ -424,7 +347,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
           <button
             type="submit"
             className="btn btn-primary"
-            disabled={loading || hasErrors}
+            disabled={loading || !isValid}
           >
             {loading ? (
               <>

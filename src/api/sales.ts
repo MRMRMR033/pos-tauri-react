@@ -1,7 +1,6 @@
 // src/api/sales.ts - API completa para ventas (tickets) con NestJS
-import { fetch } from '@tauri-apps/plugin-http';
-
-const API_URL = 'http://localhost:3000';
+import { apiClient } from './client';
+import { ApiResponse, Ticket } from '../types/api';
 
 export interface VentaProducto {
   id?: number;
@@ -18,7 +17,7 @@ export interface VentaProducto {
 
 export interface Venta {
   id: number;
-  numero: string; // N�mero de factura/ticket
+  numero: string; // N�mero de factura/ticket
   usuarioId: number;
   sesionId?: number;
   fecha: string;
@@ -50,114 +49,79 @@ export interface CreateVentaRequest {
   observaciones?: string;
 }
 
+// DTO que coincide con el backend CreateEnhancedTicketDto
+export interface CreateTicketRequest {
+  usuarioId: number; // Placeholder - Se sobreescribe con el JWT token en el backend
+  turnoCajaId?: number;
+  fecha?: string;
+  items: {
+    productoId: number;
+    cantidad?: number;
+    precioUnitario?: number;
+    descuento?: number;
+  }[];
+  descuentoManual?: number;
+  recargoManual?: number;
+  observaciones?: string;
+}
+
 export interface UpdateVentaRequest {
   estado?: string;
   observaciones?: string;
 }
 
-function getAuthHeaders(token?: string): HeadersInit {
-  const authToken = token || localStorage.getItem('token');
-  return {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${authToken}`,
+export async function getVentas(): Promise<ApiResponse<Venta[]>> {
+  return apiClient.get<Venta[]>('/venta');
+}
+
+export async function getVentaById(id: number): Promise<ApiResponse<Venta>> {
+  return apiClient.get<Venta>(`/venta/${id}`);
+}
+
+export async function createVenta(data: CreateVentaRequest): Promise<ApiResponse<Ticket>> {
+  // Mapear al formato correcto del backend (CreateEnhancedTicketDto)
+  const backendData: CreateTicketRequest = {
+    usuarioId: 1, // Placeholder - Se sobreescribe con el JWT token en el backend (línea 107 del controller)
+    items: data.productos.map(p => ({
+      productoId: p.productoId,
+      cantidad: p.cantidad,
+      precioUnitario: p.precio
+      // No incluimos descuento por item por ahora
+    })),
+    descuentoManual: data.descuento || 0,
+    observaciones: data.observaciones
+    // turnoCajaId se puede obtener automáticamente del backend si está configurado
   };
-}
-
-export async function getVentas(token?: string): Promise<Venta[]> {
+  
+  console.log('🚀 Enviando venta al backend:', backendData);
+  
   try {
-    const res = await fetch(`${API_URL}/venta`, {
-      method: 'GET',
-      headers: getAuthHeaders(token),
-    });
+    const response = await apiClient.post<Ticket>('/ventas', backendData);
+    console.log('✅ Respuesta exitosa del backend:', response);
+    return response;
+  } catch (error) {
+    console.error('💥 Error específico en createVenta:', error);
+    console.error('💥 Tipo de error:', typeof error);
+    console.error('💥 Es ApiError?:', error instanceof Error);
     
-    if (!res.ok) {
-      throw new Error(`Error ${res.status}: No se pudieron obtener las ventas`);
+    if (error && typeof error === 'object') {
+      console.error('💥 Propiedades del error:', Object.keys(error));
+      console.error('💥 Error completo:', JSON.stringify(error, null, 2));
     }
     
-    return await res.json();
-  } catch (error) {
-    console.error('Error en getVentas:', error);
     throw error;
   }
 }
 
-export async function getVentaById(id: number, token?: string): Promise<Venta> {
-  try {
-    const res = await fetch(`${API_URL}/venta/${id}`, {
-      method: 'GET',
-      headers: getAuthHeaders(token),
-    });
-    
-    if (!res.ok) {
-      throw new Error(`Error ${res.status}: No se pudo obtener la venta`);
-    }
-    
-    return await res.json();
-  } catch (error) {
-    console.error('Error en getVentaById:', error);
-    throw error;
-  }
+export async function updateVenta(id: number, data: UpdateVentaRequest): Promise<ApiResponse<Venta>> {
+  return apiClient.patch<Venta>(`/venta/${id}`, data);
 }
 
-export async function createVenta(data: CreateVentaRequest, token?: string): Promise<Venta> {
-  try {
-    const res = await fetch(`${API_URL}/venta`, {
-      method: 'POST',
-      headers: getAuthHeaders(token),
-      body: JSON.stringify(data),
-    });
-    
-    if (!res.ok) {
-      const errorData = await res.text();
-      console.error('Error del servidor:', errorData);
-      throw new Error(`Error ${res.status}: No se pudo crear la venta`);
-    }
-    
-    return await res.json();
-  } catch (error) {
-    console.error('Error en createVenta:', error);
-    throw error;
-  }
+export async function deleteVenta(id: number): Promise<ApiResponse<void>> {
+  return apiClient.delete<void>(`/venta/${id}`);
 }
 
-export async function updateVenta(id: number, data: UpdateVentaRequest, token?: string): Promise<Venta> {
-  try {
-    const res = await fetch(`${API_URL}/venta/${id}`, {
-      method: 'PATCH',
-      headers: getAuthHeaders(token),
-      body: JSON.stringify(data),
-    });
-    
-    if (!res.ok) {
-      const errorData = await res.text();
-      console.error('Error del servidor:', errorData);
-      throw new Error(`Error ${res.status}: No se pudo actualizar la venta`);
-    }
-    
-    return await res.json();
-  } catch (error) {
-    console.error('Error en updateVenta:', error);
-    throw error;
-  }
-}
-
-export async function deleteVenta(id: number, token?: string): Promise<void> {
-  try {
-    const res = await fetch(`${API_URL}/venta/${id}`, {
-      method: 'DELETE',
-      headers: getAuthHeaders(token),
-    });
-    
-    if (!res.ok) {
-      throw new Error(`Error ${res.status}: No se pudo eliminar la venta`);
-    }
-  } catch (error) {
-    console.error('Error en deleteVenta:', error);
-    throw error;
-  }
-}
-
-// Funci�n auxiliar para calcular totales de venta
+// Funci�n auxiliar para calcular totales de venta
 export function calcularTotalesVenta(productos: VentaProducto[], descuento: number = 0) {
   const subtotal = productos.reduce((sum, item) => sum + item.subtotal, 0);
   const descuentoAplicado = Math.min(descuento, subtotal);
@@ -170,7 +134,7 @@ export function calcularTotalesVenta(productos: VentaProducto[], descuento: numb
   };
 }
 
-// Funci�n auxiliar para calcular cambio
+// Funci�n auxiliar para calcular cambio
 export function calcularCambio(total: number, montoPagado: number): number {
   return Math.max(0, montoPagado - total);
 }

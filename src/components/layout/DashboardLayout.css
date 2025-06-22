@@ -365,11 +365,68 @@
 .dl-content {
   grid-area: content;
   padding: 0;
-  overflow-y: auto;
+  overflow: hidden;
   background: transparent;
   position: relative;
   z-index: 1;
   animation: fadeInUp 0.6s ease-out 0.3s both;
+  color: #111827 !important; /* Texto negro por defecto */
+}
+
+/* Asegurar que todos los elementos de texto dentro del contenido sean legibles */
+.dl-content * {
+  color: inherit;
+}
+
+.dl-content h1,
+.dl-content h2,
+.dl-content h3,
+.dl-content h4,
+.dl-content h5,
+.dl-content h6 {
+  color: #111827 !important;
+}
+
+.dl-content p,
+.dl-content span,
+.dl-content div {
+  color: #374151 !important;
+}
+
+.dl-content label {
+  color: #111827 !important;
+}
+
+.dl-content input,
+.dl-content textarea,
+.dl-content select {
+  color: #111827 !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  border: 1px solid #d1d5db !important;
+}
+
+.dl-content input:focus,
+.dl-content textarea:focus,
+.dl-content select:focus {
+  color: #111827 !important;
+  background: #ffffff !important;
+  border-color: #3b82f6 !important;
+}
+
+/* Excepción para elementos que deben mantener su color específico */
+.dl-content .btn-primary,
+.dl-content .btn-secondary,
+.dl-content .btn-danger,
+.dl-content .error-message,
+.dl-content .success-message,
+.dl-content .warning-message {
+  color: inherit !important;
+}
+
+/* Excepción específica para modales con esquemas oscuros */
+.dl-content .modal-overlay.dark-theme,
+.dl-content .modal-overlay.dark-theme * {
+  color: inherit !important;
 }
 
 @keyframes fadeInUp {

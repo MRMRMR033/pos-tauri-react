@@ -8,7 +8,7 @@ import { ALL_PERMISSIONS } from '../types/permissions';
 import '../components/auth/ProtectedComponent.css';
 
 const Categorias: React.FC = () => {
-  const { hasPermission, accessToken } = usePermissions();
+  const { hasPermission } = usePermissions();
   
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [form, setForm] = useState({ nombre: '' });
@@ -23,8 +23,8 @@ const Categorias: React.FC = () => {
 
   const loadCategorias = async () => {
     try {
-      const data = await getCategorias(accessToken || undefined);
-      setCategorias(data);
+      const response = await getCategorias();
+      setCategorias(response.data);
     } catch (err: any) {
       setError('Error al cargar categorías');
       console.error('Error loading categorias:', err);
@@ -52,11 +52,11 @@ const Categorias: React.FC = () => {
 
     try {
       if (editingId) {
-        await updateCategoria(editingId, form, accessToken || undefined);
+        await updateCategoria(editingId, form);
         setSuccess('Categoría actualizada exitosamente');
         setEditingId(null);
       } else {
-        await createCategoria(form, accessToken || undefined);
+        await createCategoria(form);
         setSuccess('Categoría creada exitosamente');
       }
       
@@ -86,7 +86,7 @@ const Categorias: React.FC = () => {
     }
 
     try {
-      await deleteCategoria(id, accessToken || undefined);
+      await deleteCategoria(id);
       setSuccess('Categoría eliminada exitosamente');
       await loadCategorias();
     } catch (err: any) {

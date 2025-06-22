@@ -37,10 +37,12 @@ export interface UpdateMovimientoCajaRequest {
 }
 
 function getAuthHeaders(token?: string): HeadersInit {
-  const authToken = token || localStorage.getItem('token');
+  if (!token) {
+    throw new Error('Token de autenticación requerido');
+  }
   return {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${authToken}`,
+    'Authorization': `Bearer ${token}`,
   };
 }
 
